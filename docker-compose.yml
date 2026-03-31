@@ -1,0 +1,8 @@
+services:
+  service:
+    image: ghcr.io/fresh-incorporated/fresh-frontend:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT:-3000}:${PORT:-3000}"
