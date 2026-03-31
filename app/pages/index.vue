@@ -1,9 +1,9 @@
 <template>
   <div>
-    <h2 class="text-2xl font-bold mb-6">
+    <h2 class="text-2xl font-bold">
       Дашборд
     </h2>
-    <p class="text-gray-500">
+    <p class="text-muted mt-2">
       Добро пожаловать в FreshDonate
     </p>
   </div>

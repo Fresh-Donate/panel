@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen flex bg-gray-50 dark:bg-gray-950">
+  <div class="min-h-screen flex bg-default">
     <!-- Sidebar -->
-    <aside class="w-64 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col">
+    <aside class="w-64 border-r border-default bg-elevated flex flex-col">
       <div class="p-6">
         <h1 class="text-xl font-bold text-primary">
           FreshDonate
         </h1>
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-muted">
           Admin Panel
         </p>
       </div>
@@ -24,7 +24,7 @@
         />
       </nav>
 
-      <div class="p-4 border-t border-gray-200 dark:border-gray-800">
+      <div class="p-4 border-t border-default">
         <UButton
           icon="i-lucide-log-out"
           label="Выйти"

@@ -29,7 +29,7 @@
 
       <p
         v-if="error"
-        class="text-sm text-red-500"
+        class="text-sm text-error"
       >
         {{ error }}
       </p>
