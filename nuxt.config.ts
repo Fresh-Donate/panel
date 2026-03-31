@@ -1,33 +1,27 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
 
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
     '@nuxt/image',
     '@nuxt/icon',
-    '@pinia/nuxt',
+    '@pinia/nuxt'
   ],
+  devtools: { enabled: true },
 
   css: ['~/assets/css/main.css'],
 
-  icon: {
-    mode: 'css',
-    cssLayer: 'base',
-    componentName: 'Icon'
-  },
-
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:3001',
-    },
+      apiBase: 'http://localhost:3001'
+    }
   },
 
   devServer: {
-    port: 3000,
+    port: 3000
   },
+  compatibilityDate: '2025-07-15',
 
   eslint: {
     config: {
@@ -37,4 +31,10 @@ export default defineNuxtConfig({
       }
     }
   },
-});
+
+  icon: {
+    mode: 'css',
+    cssLayer: 'base',
+    componentName: 'Icon'
+  }
+})
