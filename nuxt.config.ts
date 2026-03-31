@@ -13,12 +13,14 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   icon: {
-    serverBundle: 'remote',
+    mode: 'css',
+    cssLayer: 'base',
+    componentName: 'Icon'
   },
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001',
+      apiBase: 'http://localhost:3001',
     },
   },
 
