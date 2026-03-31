@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   modules: [
+    '@nuxt/eslint',
     '@nuxt/ui',
     '@nuxt/image',
     '@nuxt/icon',
@@ -26,5 +27,14 @@ export default defineNuxtConfig({
 
   devServer: {
     port: 3000,
+  },
+
+  eslint: {
+    config: {
+      stylistic: {
+        commaDangle: 'never',
+        braceStyle: '1tbs'
+      }
+    }
   },
 });
