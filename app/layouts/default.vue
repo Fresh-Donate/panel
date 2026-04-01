@@ -6,54 +6,67 @@ const route = useRoute()
 const open = ref(false)
 
 const links = [[{
-  label: 'Home',
+  label: 'Главная',
   icon: 'i-lucide-house',
   to: '/',
   onSelect: () => {
     open.value = false
   }
 }, {
-  label: 'Inbox',
-  icon: 'i-lucide-inbox',
-  to: '/inbox',
-  badge: '4',
+  label: 'Товары',
+  icon: 'i-lucide-package',
+  to: '/products',
   onSelect: () => {
     open.value = false
   }
 }, {
-  label: 'Customers',
+  label: 'Клиенты',
   icon: 'i-lucide-users',
   to: '/customers',
   onSelect: () => {
     open.value = false
   }
 }, {
-  label: 'Settings',
+  label: 'Страница магазина',
+  to: '/shop/settings',
+  icon: 'i-lucide-store',
+  defaultOpen: true,
+  type: 'trigger',
+  children: [{
+    label: 'Общее',
+    to: '/shop/settings',
+    exact: true,
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
+    label: 'Платёжные системы',
+    to: '/shop/settings/payments',
+    onSelect: () => {
+      open.value = false
+    }
+  }]
+}, {
+  label: 'Настройки',
   to: '/settings',
   icon: 'i-lucide-settings',
   defaultOpen: true,
   type: 'trigger',
   children: [{
-    label: 'General',
+    label: 'Общее',
     to: '/settings',
     exact: true,
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Members',
-    to: '/settings/members',
-    onSelect: () => {
-      open.value = false
-    }
-  }, {
-    label: 'Notifications',
+    label: 'Уведомления',
     to: '/settings/notifications',
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Security',
+    label: 'Безопасность',
     to: '/settings/security',
     onSelect: () => {
       open.value = false
