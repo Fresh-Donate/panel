@@ -1,69 +1,59 @@
-<template>
-  <UCard>
-    <template #header>
-      <h2 class="text-lg font-semibold text-center">
-        Вход в панель
-      </h2>
-    </template>
-
-    <form
-      class="space-y-4"
-      @submit.prevent="handleLogin"
-    >
-      <UFormField label="Логин">
-        <UInput
-          v-model="login"
-          placeholder="admin"
-          required
-        />
-      </UFormField>
-
-      <UFormField label="Пароль">
-        <UInput
-          v-model="password"
-          type="password"
-          placeholder="••••••••"
-          required
-        />
-      </UFormField>
-
-      <p
-        v-if="error"
-        class="text-sm text-error"
-      >
-        {{ error }}
-      </p>
-
-      <UButton
-        type="submit"
-        block
-        :loading="loading"
-      >
-        Войти
-      </UButton>
-    </form>
-  </UCard>
-</template>
-
 <script setup lang="ts">
+import * as z from 'zod'
+import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
+
 definePageMeta({ layout: 'auth' })
 
 const auth = useAuthStore()
-const login = ref('')
-const password = ref('')
-const loading = ref(false)
-const error = ref('')
+const toast = useToast()
 
-async function handleLogin() {
-  loading.value = true
-  error.value = ''
+const fields: AuthFormField[] = [{
+  name: 'login',
+  type: 'name',
+  label: 'Логин',
+  placeholder: 'Введите логин',
+  required: true
+}, {
+  name: 'password',
+  label: 'Пароль',
+  type: 'password',
+  placeholder: 'Введите пароль',
+  required: true
+}]
+
+const schema = z.object({
+  login: z.string('Требуется логин'),
+  password: z.string('Требуется пароль')
+})
+
+type Schema = z.output<typeof schema>
+
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  const data = payload.data
   try {
-    await auth.login(login.value, password.value)
+    await auth.login(data.login, data.password)
     navigateTo('/')
   } catch (e: any) {
-    error.value = e?.data?.message || 'Неверный логин или пароль'
-  } finally {
-    loading.value = false
+    console.error(e)
+    toast.add({ title: 'Ошибка входа', description: e?.data?.message || 'Неверный логин или пароль', color: 'error', icon: 'lucide:shield-alert' })
   }
 }
 </script>
+
+<template>
+  <div class="flex flex-col items-center justify-center gap-4 p-4">
+    <UPageCard class="w-full max-w-md">
+      <UAuthForm
+        :schema="schema"
+        title="FreshDonate"
+        description="Введите данные от панели из environment"
+        icon="i-lucide-user"
+        :fields="fields"
+        :submit="{
+          label: 'Войти'
+        }"
+        @submit="onSubmit"
+      />
+    </UPageCard>
+  </div>
+</template>
