@@ -2,6 +2,8 @@
 import { z } from 'zod'
 
 const toast = useToast()
+const config = useRuntimeConfig()
+const token = useCookie('auth_token')
 
 const tailwindColors: Record<string, string> = {
   slate: '#64748b',
@@ -44,18 +46,56 @@ const schema = z.object({
 type ShopSettingsSchema = z.output<typeof schema>
 
 const state = reactive<ShopSettingsSchema>({
-  name: 'FreshDonate Shop',
-  description: 'Лучший магазин для вашего сервера. Покупайте привилегии, ресурсы и многое другое!',
+  name: '',
+  description: '',
   color: 'sky'
 })
 
 const loading = ref(false)
+const fetching = ref(true)
+
+// Load settings from API
+async function fetchSettings() {
+  fetching.value = true
+  try {
+    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
+      baseURL: config.public.apiBase as string
+    })
+    state.name = data.name
+    state.description = data.description || ''
+    state.color = data.color
+  } catch {
+    toast.add({
+      title: 'Ошибка загрузки',
+      description: 'Не удалось загрузить настройки магазина.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  } finally {
+    fetching.value = false
+  }
+}
+
+onMounted(fetchSettings)
 
 async function onSubmit() {
   loading.value = true
   try {
-    // TODO: API call to save settings
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
+      baseURL: config.public.apiBase as string,
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      },
+      body: {
+        name: state.name,
+        description: state.description,
+        color: state.color
+      }
+    })
+    state.name = data.name
+    state.description = data.description || ''
+    state.color = data.color
     toast.add({
       title: 'Настройки сохранены',
       description: 'Настройки магазина успешно обновлены.',
@@ -86,7 +126,18 @@ async function onSubmit() {
     </template>
 
     <template #body>
+      <div
+        v-if="fetching"
+        class="flex items-center justify-center py-12"
+      >
+        <UIcon
+          name="i-lucide-loader-circle"
+          class="size-8 animate-spin text-muted"
+        />
+      </div>
+
       <UPageCard
+        v-else
         title="Общие настройки"
         description="Основная информация о вашем магазине, которая будет отображаться покупателям."
       >
