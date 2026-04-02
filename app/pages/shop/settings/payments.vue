@@ -84,7 +84,10 @@ function saveProvider() {
           />
 
           <template v-if="selectedProvider.enabled">
-            <PaymentCredentialsCard :provider="selectedProvider" />
+            <PaymentCredentialsCard
+              :provider="selectedProvider"
+              @update:credential="(key, val) => selectedProvider.credentials[key] = val"
+            />
 
             <PaymentMethodsList :methods="selectedProvider.methods" />
 

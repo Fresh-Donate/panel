@@ -5,6 +5,10 @@ const props = defineProps<{
   provider: PaymentProvider
 }>()
 
+const emit = defineEmits<{
+  'update:credential': [key: string, value: string]
+}>()
+
 const credentialLabels: Record<string, Record<string, { label: string, placeholder: string }>> = {
   yookassa: {
     shopId: { label: 'Shop ID', placeholder: 'Введите Shop ID из личного кабинета ЮKassa' },
@@ -42,10 +46,11 @@ function isSecret(key: string): boolean {
         :label="getLabel(key as string)"
       >
         <UInput
-          v-model="provider.credentials[key as string]"
+          :model-value="provider.credentials[key as string]"
           :type="isSecret(key as string) ? 'password' : 'text'"
           :placeholder="getPlaceholder(key as string)"
           class="w-full max-w-lg"
+          @update:model-value="emit('update:credential', key as string, $event as string)"
         />
       </UFormField>
     </div>
