@@ -30,3 +30,29 @@ export interface Stat {
   variation: number
   formatter?: (value: number) => string
 }
+
+export interface PaymentMethod {
+  id: string
+  name: string
+  commission: number
+  enabled: boolean
+}
+
+export type CommissionMode = 'seller' | 'buyer' | 'split'
+
+export interface CommissionRule {
+  mode: CommissionMode
+  customPercent?: number
+}
+
+export interface PaymentProvider {
+  id: string
+  name: string
+  description: string
+  icon: string
+  enabled: boolean
+  credentials: Record<string, string>
+  methods: PaymentMethod[]
+  commissionRule: CommissionRule
+  supportedCurrencies: string[]
+}
