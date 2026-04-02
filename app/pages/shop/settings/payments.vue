@@ -2,65 +2,82 @@
 import type { PaymentProvider } from '~/types'
 
 const toast = useToast()
+const config = useRuntimeConfig()
+const token = useCookie('auth_token')
 
 const selectedProviderId = ref('yookassa')
+const providers = reactive<PaymentProvider[]>([])
+const fetching = ref(true)
+const saving = ref(false)
 
-const providers = reactive<PaymentProvider[]>([
-  {
-    id: 'yookassa',
-    name: 'ЮKassa',
-    description: 'Приём платежей для РФ: банковские карты, СБП, ЮMoney, SberPay, T-Pay',
-    icon: 'i-lucide-credit-card',
-    enabled: false,
-    credentials: {
-      shopId: '',
-      secretKey: ''
-    },
-    methods: [
-      { id: 'bank_card', name: 'Банковские карты', commission: 2.8, enabled: true },
-      { id: 'sbp', name: 'СБП', commission: 0.4, enabled: true },
-      { id: 'yoo_money', name: 'ЮMoney', commission: 3.0, enabled: true },
-      { id: 'sber_pay', name: 'SberPay', commission: 2.8, enabled: false },
-      { id: 't_pay', name: 'T-Pay', commission: 2.8, enabled: false },
-      { id: 'qiwi', name: 'QIWI', commission: 6.0, enabled: false }
-    ],
-    commissionRule: { mode: 'seller' },
-    supportedCurrencies: ['RUB']
-  },
-  {
-    id: 'heleket',
-    name: 'Heleket',
-    description: 'Криптовалютные платежи: BTC, ETH, USDT и другие',
-    icon: 'i-lucide-bitcoin',
-    enabled: false,
-    credentials: {
-      apiKey: '',
-      merchantId: ''
-    },
-    methods: [
-      { id: 'btc', name: 'Bitcoin (BTC)', commission: 0.5, enabled: true },
-      { id: 'eth', name: 'Ethereum (ETH)', commission: 0.5, enabled: true },
-      { id: 'usdt_trc20', name: 'USDT (TRC-20)', commission: 0.5, enabled: true },
-      { id: 'usdt_erc20', name: 'USDT (ERC-20)', commission: 0.5, enabled: false },
-      { id: 'ltc', name: 'Litecoin (LTC)', commission: 0.5, enabled: false },
-      { id: 'trx', name: 'TRON (TRX)', commission: 0.5, enabled: false }
-    ],
-    commissionRule: { mode: 'seller' },
-    supportedCurrencies: ['USD', 'EUR', 'RUB']
+async function fetchProviders() {
+  fetching.value = true
+  try {
+    const data = await $fetch<PaymentProvider[]>('/payment-providers', {
+      baseURL: config.public.apiBase as string,
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    providers.splice(0, providers.length, ...data)
+    if (data.length > 0 && !data.find(p => p.providerId === selectedProviderId.value)) {
+      selectedProviderId.value = data[0].providerId
+    }
+  } catch {
+    toast.add({
+      title: 'Ошибка загрузки',
+      description: 'Не удалось загрузить платёжные системы.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  } finally {
+    fetching.value = false
   }
-])
+}
+
+onMounted(fetchProviders)
 
 const selectedProvider = computed(() =>
-  providers.find(p => p.id === selectedProviderId.value)!
+  providers.find(p => p.providerId === selectedProviderId.value)!
 )
 
-function saveProvider() {
-  toast.add({
-    title: 'Настройки сохранены',
-    description: `Настройки ${selectedProvider.value.name} успешно обновлены.`,
-    icon: 'i-lucide-check-circle',
-    color: 'success'
-  })
+async function saveProvider() {
+  const provider = selectedProvider.value
+  if (!provider) return
+
+  saving.value = true
+  try {
+    const updated = await $fetch<PaymentProvider>(`/payment-providers/${provider.providerId}`, {
+      baseURL: config.public.apiBase as string,
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: {
+        enabled: provider.enabled,
+        credentials: provider.credentials,
+        methods: provider.methods,
+        commissionRule: provider.commissionRule
+      }
+    })
+
+    const idx = providers.findIndex(p => p.providerId === updated.providerId)
+    if (idx !== -1) {
+      Object.assign(providers[idx], updated)
+    }
+
+    toast.add({
+      title: 'Настройки сохранены',
+      description: `Настройки ${provider.name} успешно обновлены.`,
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch {
+    toast.add({
+      title: 'Ошибка',
+      description: 'Не удалось сохранить настройки.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -75,7 +92,20 @@ function saveProvider() {
     </template>
 
     <template #body>
-      <div class="grid grid-cols-3 gap-6">
+      <div
+        v-if="fetching"
+        class="flex items-center justify-center py-12"
+      >
+        <UIcon
+          name="i-lucide-loader-circle"
+          class="size-8 animate-spin text-muted"
+        />
+      </div>
+
+      <div
+        v-else-if="providers.length > 0"
+        class="grid grid-cols-3 gap-6"
+      >
         <!-- Left: Provider Settings -->
         <div class="space-y-6 min-w-0 col-span-2">
           <PaymentProviderHeader
@@ -100,6 +130,7 @@ function saveProvider() {
               <UButton
                 label="Сохранить"
                 icon="i-lucide-save"
+                :loading="saving"
                 @click="saveProvider"
               />
             </div>

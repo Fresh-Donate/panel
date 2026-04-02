@@ -16,13 +16,13 @@ const selectedId = defineModel<string>('selectedId', { required: true })
 
     <button
       v-for="provider in providers"
-      :key="provider.id"
+      :key="provider.providerId"
       type="button"
       class="w-full text-left rounded-xl border p-4 transition-all cursor-pointer"
-      :class="selectedId === provider.id
+      :class="selectedId === provider.providerId
         ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
         : 'border-default bg-elevated hover:border-muted'"
-      @click="selectedId = provider.id"
+      @click="selectedId = provider.providerId"
     >
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3 min-w-0">

@@ -21,11 +21,11 @@ const credentialLabels: Record<string, Record<string, { label: string, placehold
 }
 
 function getLabel(key: string): string {
-  return credentialLabels[props.provider.id]?.[key]?.label || key
+  return credentialLabels[props.provider.providerId]?.[key]?.label || key
 }
 
 function getPlaceholder(key: string): string {
-  return credentialLabels[props.provider.id]?.[key]?.placeholder || ''
+  return credentialLabels[props.provider.providerId]?.[key]?.placeholder || ''
 }
 
 function isSecret(key: string): boolean {

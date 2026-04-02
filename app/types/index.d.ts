@@ -47,6 +47,7 @@ export interface CommissionRule {
 
 export interface PaymentProvider {
   id: string
+  providerId: string
   name: string
   description: string
   icon: string
