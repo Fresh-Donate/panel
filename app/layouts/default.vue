@@ -45,6 +45,12 @@ const links = [[{
     onSelect: () => {
       open.value = false
     }
+  }, {
+    label: 'Методы оплаты',
+    to: '/shop/settings/payment-options',
+    onSelect: () => {
+      open.value = false
+    }
   }]
 }, {
   label: 'Настройки',
