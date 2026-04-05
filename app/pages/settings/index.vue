@@ -18,7 +18,16 @@ const state = reactive<SettingsSchema>({
 const loading = ref(false)
 const fetching = ref(true)
 
-// Load settings from API
+// Delivery method
+type DeliveryMethod = 'rcon' | 'plugin'
+const deliveryMethod = ref<DeliveryMethod>('rcon')
+
+const rconState = reactive({
+  host: '',
+  port: 25575,
+  password: ''
+})
+
 async function fetchSettings() {
   fetching.value = true
   try {
@@ -77,7 +86,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <UDashboardPanel id="shop-settings">
+  <UDashboardPanel id="settings">
     <template #header>
       <UDashboardNavbar title="Настройки">
         <template #leading>
@@ -97,42 +106,217 @@ async function onSubmit() {
         />
       </div>
 
-      <UPageCard
+      <div
         v-else
-        title="Общие настройки"
-        description="Ключевые настройки магазина и панели."
+        class="space-y-6"
       >
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-6"
-          @submit="onSubmit"
+        <!-- General -->
+        <UPageCard
+          title="Общие настройки"
+          description="Ключевые настройки магазина и панели."
         >
-          <UFormField
-            label="Режим демо-платежей"
-            name="name"
-            description="Платежи из магазина будут автоматически приниматься и не будут взимать плату."
-            required
+          <UForm
+            :schema="schema"
+            :state="state"
+            class="space-y-6"
+            @submit="onSubmit"
           >
-            <USwitch
-              v-model="state.demo_payments"
-              icon="i-lucide-store"
-              class="w-full max-w-md"
-            />
-          </UFormField>
+            <UFormField
+              label="Режим демо-платежей"
+              name="demo_payments"
+              description="Платежи из магазина будут автоматически приниматься и не будут взимать плату."
+            >
+              <USwitch v-model="state.demo_payments" />
+            </UFormField>
 
-          <USeparator />
+            <USeparator />
 
-          <div>
-            <UButton
-              type="submit"
-              label="Сохранить"
-              icon="i-lucide-save"
-              :loading="loading"
-            />
+            <div>
+              <UButton
+                type="submit"
+                label="Сохранить"
+                icon="i-lucide-save"
+                :loading="loading"
+              />
+            </div>
+          </UForm>
+        </UPageCard>
+
+        <!-- Delivery -->
+        <UPageCard
+          title="Выдача товаров"
+          description="Выберите способ выдачи товаров игрокам после оплаты."
+        >
+          <!-- Method selector -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <button
+              type="button"
+              class="flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer text-left"
+              :class="deliveryMethod === 'rcon'
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-default bg-elevated hover:border-muted'"
+              @click="deliveryMethod = 'rcon'"
+            >
+              <div
+                class="size-12 rounded-xl flex items-center justify-center shrink-0"
+                :class="deliveryMethod === 'rcon' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'"
+              >
+                <UIcon
+                  name="i-lucide-terminal"
+                  class="size-6"
+                />
+              </div>
+              <div>
+                <p class="font-semibold">
+                  RCON
+                </p>
+                <p class="text-xs text-muted mt-0.5">
+                  Подключение к серверу через RCON протокол для выполнения команд
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer text-left"
+              :class="deliveryMethod === 'plugin'
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-default bg-elevated hover:border-muted'"
+              @click="deliveryMethod = 'plugin'"
+            >
+              <div
+                class="size-12 rounded-xl flex items-center justify-center shrink-0"
+                :class="deliveryMethod === 'plugin' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'"
+              >
+                <UIcon
+                  name="i-lucide-puzzle"
+                  class="size-6"
+                />
+              </div>
+              <div>
+                <p class="font-semibold">
+                  Плагин
+                </p>
+                <p class="text-xs text-muted mt-0.5">
+                  Установите плагин на сервер для автоматической выдачи
+                </p>
+              </div>
+            </button>
           </div>
-        </UForm>
-      </UPageCard>
+
+          <!-- RCON settings -->
+          <div
+            v-if="deliveryMethod === 'rcon'"
+            class="space-y-4"
+          >
+            <div class="flex gap-3 p-3 rounded-lg bg-info/10 border border-info/20 mb-4">
+              <UIcon
+                name="i-lucide-info"
+                class="size-5 text-info shrink-0 mt-0.5"
+              />
+              <p class="text-xs text-muted">
+                Убедитесь, что RCON включён в <span class="font-mono">server.properties</span>: <span class="font-mono">enable-rcon=true</span>, <span class="font-mono">rcon.port=25575</span>, <span class="font-mono">rcon.password=your_password</span>.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+              <UFormField
+                label="Хост"
+                class="col-span-2"
+              >
+                <UInput
+                  v-model="rconState.host"
+                  placeholder="127.0.0.1 или адрес сервера"
+                  icon="i-lucide-server"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField label="Порт">
+                <UInput
+                  v-model.number="rconState.port"
+                  type="number"
+                  placeholder="25575"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <UFormField label="Пароль RCON">
+              <UInput
+                v-model="rconState.password"
+                type="password"
+                placeholder="Пароль из server.properties"
+                icon="i-lucide-lock"
+                class="w-full max-w-lg"
+              />
+            </UFormField>
+
+            <USeparator />
+
+            <div>
+              <UButton
+                label="Сохранить"
+                icon="i-lucide-save"
+              />
+            </div>
+          </div>
+
+          <!-- Plugin settings -->
+          <div
+            v-if="deliveryMethod === 'plugin'"
+            class="space-y-4"
+          >
+            <div class="flex gap-3 p-3 rounded-lg bg-info/10 border border-info/20">
+              <UIcon
+                name="i-lucide-info"
+                class="size-5 text-info shrink-0 mt-0.5"
+              />
+              <p class="text-xs text-muted">
+                Скачайте плагин и поместите его в папку <span class="font-mono">plugins/</span> вашего сервера. Плагин автоматически подключится к FreshDonate и будет выдавать товары.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-4 p-5 rounded-xl border border-default bg-elevated">
+              <div class="size-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <UIcon
+                  name="i-lucide-puzzle"
+                  class="size-7 text-primary"
+                />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold">
+                  FreshDonate Plugin
+                </p>
+                <p class="text-sm text-muted mt-0.5">
+                  Для Spigot / Paper 1.16+
+                </p>
+                <p class="text-xs text-muted mt-1">
+                  Версия 1.0.0 • Обновлено недавно
+                </p>
+              </div>
+              <UButton
+                label="Скачать .jar"
+                icon="i-lucide-download"
+                variant="soft"
+                disabled
+              />
+            </div>
+
+            <div class="p-4 rounded-lg bg-muted/5 border border-default">
+              <p class="text-sm font-medium mb-2">
+                Установка:
+              </p>
+              <ol class="text-xs text-muted space-y-1.5 list-decimal list-inside">
+                <li>Скачайте <span class="font-mono">FreshDonate.jar</span></li>
+                <li>Поместите файл в папку <span class="font-mono">plugins/</span> сервера</li>
+                <li>Перезапустите сервер</li>
+                <li>Укажите URL панели в <span class="font-mono">plugins/FreshDonate/config.yml</span></li>
+              </ol>
+            </div>
+          </div>
+        </UPageCard>
+      </div>
     </template>
   </UDashboardPanel>
 </template>
