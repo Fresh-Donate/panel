@@ -20,6 +20,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Платежи',
+  icon: 'i-lucide-receipt',
+  to: '/payments',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Клиенты',
   icon: 'i-lucide-users',
   to: '/customers',

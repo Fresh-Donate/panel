@@ -1,80 +1,52 @@
 <script setup lang="ts">
-import type { Period, Range, Stat } from '~/types'
+import type { Stat } from '~/types'
 
-const props = defineProps<{
-  period: Period
-  range: Range
-}>()
+const config = useRuntimeConfig()
+const token = useCookie('auth_token')
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0
-  })
+interface StatsResponse {
+  totalRevenue: number
+  totalPayments: number
+  totalCustomers: number
 }
 
-const baseStats = [{
-  title: 'Customers',
-  icon: 'i-lucide-users',
-  minValue: 400,
-  maxValue: 1000,
-  minVariation: -15,
-  maxVariation: 25
-}, {
-  title: 'Conversions',
-  icon: 'i-lucide-chart-pie',
-  minValue: 1000,
-  maxValue: 2000,
-  minVariation: -10,
-  maxVariation: 20
-}, {
-  title: 'Revenue',
-  icon: 'i-lucide-circle-dollar-sign',
-  minValue: 200000,
-  maxValue: 500000,
-  minVariation: -20,
-  maxVariation: 30,
-  formatter: formatCurrency
-}, {
-  title: 'Orders',
-  icon: 'i-lucide-shopping-cart',
-  minValue: 100,
-  maxValue: 300,
-  minVariation: -5,
-  maxVariation: 15
-}]
+const { data: apiStats } = await useAsyncData<StatsResponse>('dashboard-stats', () =>
+  $fetch<StatsResponse>('/stats', {
+    baseURL: config.public.apiBase as string,
+    headers: { Authorization: `Bearer ${token.value}` }
+  }),
+  { default: () => ({ totalRevenue: 0, totalPayments: 0, totalCustomers: 0 }) }
+)
 
-const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
-  return baseStats.map((stat) => {
-    const value = randomInt(stat.minValue, stat.maxValue)
-    const variation = randomInt(stat.minVariation, stat.maxVariation)
-
-    return {
-      title: stat.title,
-      icon: stat.icon,
-      value: stat.formatter ? stat.formatter(value) : value,
-      variation
-    }
-  })
-}, {
-  watch: [() => props.period, () => props.range],
-  default: () => []
-})
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
-}
+const stats = computed<Stat[]>(() => [
+  {
+    title: 'Клиенты',
+    icon: 'i-lucide-users',
+    value: apiStats.value.totalCustomers,
+    variation: 0
+  },
+  {
+    title: 'Выручка',
+    icon: 'i-lucide-circle-dollar-sign',
+    value: `${apiStats.value.totalRevenue.toLocaleString('ru-RU')}₽`,
+    variation: 0
+  },
+  {
+    title: 'Платежей',
+    icon: 'i-lucide-shopping-cart',
+    value: apiStats.value.totalPayments,
+    variation: 0
+  }
+])
 </script>
 
 <template>
-  <UPageGrid class="lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-px">
+  <UPageGrid class="lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-px">
     <UPageCard
       v-for="(stat, index) in stats"
       :key="index"
       :icon="stat.icon"
       :title="stat.title"
-      to="/customers"
       variant="subtle"
       :ui="{
         container: 'gap-y-1.5',
@@ -88,14 +60,6 @@ function randomInt(min: number, max: number): number {
         <span class="text-2xl font-semibold text-highlighted">
           {{ stat.value }}
         </span>
-
-        <UBadge
-          :color="stat.variation > 0 ? 'success' : 'error'"
-          variant="subtle"
-          class="text-xs"
-        >
-          {{ stat.variation > 0 ? '+' : '' }}{{ stat.variation }}%
-        </UBadge>
       </div>
     </UPageCard>
   </UPageGrid>
