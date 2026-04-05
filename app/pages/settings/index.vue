@@ -9,18 +9,23 @@ const schema = z.object({
   demo_payments: z.boolean()
 })
 
-type SettingsSchema = z.output<typeof schema>
+type DeliveryMethod = 'rcon' | 'plugin'
 
-const state = reactive<SettingsSchema>({
+interface SettingsData {
+  demo_payments: boolean
+  delivery_method: DeliveryMethod
+  rcon_config: { host: string, port: number, password: string }
+  plugin_config: { token: string }
+}
+
+const state = reactive({
   demo_payments: false
 })
 
-const loading = ref(false)
-const fetching = ref(true)
-
-// Delivery method
-type DeliveryMethod = 'rcon' | 'plugin'
 const deliveryMethod = ref<DeliveryMethod>('rcon')
+const savedDeliveryMethod = ref<DeliveryMethod>('rcon')
+const pendingDeliverySwitch = ref<DeliveryMethod | null>(null)
+const showSwitchWarning = ref(false)
 
 const rconState = reactive({
   host: '',
@@ -28,16 +33,28 @@ const rconState = reactive({
   password: ''
 })
 
+const pluginState = reactive({
+  token: ''
+})
+
+const loading = ref(false)
+const deliveryLoading = ref(false)
+const fetching = ref(true)
+
 async function fetchSettings() {
   fetching.value = true
   try {
-    const data = await $fetch<SettingsSchema>('/settings', {
+    const data = await $fetch<SettingsData>('/settings', {
       baseURL: config.public.apiBase as string,
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      }
+      headers: { Authorization: `Bearer ${token.value}` }
     })
     state.demo_payments = data.demo_payments
+    deliveryMethod.value = data.delivery_method
+    savedDeliveryMethod.value = data.delivery_method
+    rconState.host = data.rcon_config?.host || ''
+    rconState.port = data.rcon_config?.port || 25575
+    rconState.password = data.rcon_config?.password || ''
+    pluginState.token = data.plugin_config?.token || ''
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -52,36 +69,86 @@ async function fetchSettings() {
 
 onMounted(fetchSettings)
 
-async function onSubmit() {
+async function onSubmitGeneral() {
   loading.value = true
   try {
-    const data = await $fetch<SettingsSchema>('/settings', {
+    const data = await $fetch<SettingsData>('/settings', {
       baseURL: config.public.apiBase as string,
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      },
-      body: {
-        demo_payments: state.demo_payments
-      }
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { demo_payments: state.demo_payments }
     })
-    state.demo_payments = data.demo_payments || false
-    toast.add({
-      title: 'Настройки сохранены',
-      description: 'Настройки успешно обновлены.',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
+    state.demo_payments = data.demo_payments
+    toast.add({ title: 'Настройки сохранены', icon: 'i-lucide-check-circle', color: 'success' })
   } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось сохранить настройки.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить.', icon: 'i-lucide-alert-circle', color: 'error' })
   } finally {
     loading.value = false
   }
+}
+
+function requestDeliverySwitch(method: DeliveryMethod) {
+  if (method === deliveryMethod.value) return
+  if (savedDeliveryMethod.value !== 'rcon' && savedDeliveryMethod.value !== 'plugin') {
+    // First time — no warning needed
+    deliveryMethod.value = method
+    return
+  }
+  pendingDeliverySwitch.value = method
+  showSwitchWarning.value = true
+}
+
+function confirmSwitch() {
+  if (pendingDeliverySwitch.value) {
+    deliveryMethod.value = pendingDeliverySwitch.value
+  }
+  showSwitchWarning.value = false
+  pendingDeliverySwitch.value = null
+}
+
+function cancelSwitch() {
+  showSwitchWarning.value = false
+  pendingDeliverySwitch.value = null
+}
+
+async function saveDelivery() {
+  deliveryLoading.value = true
+  try {
+    const body: Record<string, any> = {
+      delivery_method: deliveryMethod.value
+    }
+    if (deliveryMethod.value === 'rcon') {
+      body.rcon_config = { host: rconState.host, port: rconState.port, password: rconState.password }
+    } else {
+      body.plugin_config = { token: pluginState.token }
+    }
+    const data = await $fetch<SettingsData>('/settings', {
+      baseURL: config.public.apiBase as string,
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body
+    })
+    savedDeliveryMethod.value = data.delivery_method
+    deliveryMethod.value = data.delivery_method
+    rconState.host = data.rcon_config?.host || ''
+    rconState.port = data.rcon_config?.port || 25575
+    rconState.password = data.rcon_config?.password || ''
+    pluginState.token = data.plugin_config?.token || ''
+    toast.add({ title: 'Настройки выдачи сохранены', icon: 'i-lucide-check-circle', color: 'success' })
+  } catch {
+    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить настройки выдачи.', icon: 'i-lucide-alert-circle', color: 'error' })
+  } finally {
+    deliveryLoading.value = false
+  }
+}
+
+function regenerateToken() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let result = ''
+  for (let i = 0; i < 32; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)]
+  }
+  pluginState.token = result
 }
 </script>
 
@@ -119,7 +186,7 @@ async function onSubmit() {
             :schema="schema"
             :state="state"
             class="space-y-6"
-            @submit="onSubmit"
+            @submit="onSubmitGeneral"
           >
             <UFormField
               label="Режим демо-платежей"
@@ -151,12 +218,20 @@ async function onSubmit() {
           <div class="grid grid-cols-2 gap-3 mb-6">
             <button
               type="button"
-              class="flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer text-left"
+              class="relative flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer text-left"
               :class="deliveryMethod === 'rcon'
                 ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                 : 'border-default bg-elevated hover:border-muted'"
-              @click="deliveryMethod = 'rcon'"
+              @click="requestDeliverySwitch('rcon')"
             >
+              <UBadge
+                v-if="savedDeliveryMethod === 'rcon'"
+                label="Активен"
+                color="success"
+                variant="subtle"
+                size="xs"
+                class="absolute top-3 right-3"
+              />
               <div
                 class="size-12 rounded-xl flex items-center justify-center shrink-0"
                 :class="deliveryMethod === 'rcon' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'"
@@ -178,12 +253,20 @@ async function onSubmit() {
 
             <button
               type="button"
-              class="flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer text-left"
+              class="relative flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer text-left"
               :class="deliveryMethod === 'plugin'
                 ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                 : 'border-default bg-elevated hover:border-muted'"
-              @click="deliveryMethod = 'plugin'"
+              @click="requestDeliverySwitch('plugin')"
             >
+              <UBadge
+                v-if="savedDeliveryMethod === 'plugin'"
+                label="Активен"
+                color="success"
+                variant="subtle"
+                size="xs"
+                class="absolute top-3 right-3"
+              />
               <div
                 class="size-12 rounded-xl flex items-center justify-center shrink-0"
                 :class="deliveryMethod === 'plugin' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'"
@@ -258,6 +341,8 @@ async function onSubmit() {
               <UButton
                 label="Сохранить"
                 icon="i-lucide-save"
+                :loading="deliveryLoading"
+                @click="saveDelivery"
               />
             </div>
           </div>
@@ -303,6 +388,26 @@ async function onSubmit() {
               />
             </div>
 
+            <UFormField
+              label="Токен плагина"
+              description="Используется для авторизации плагина. Укажите этот токен в config.yml плагина."
+            >
+              <div class="flex gap-2 max-w-lg">
+                <UInput
+                  v-model="pluginState.token"
+                  readonly
+                  class="w-full font-mono text-sm"
+                />
+                <UButton
+                  icon="i-lucide-refresh-cw"
+                  variant="soft"
+                  color="neutral"
+                  square
+                  @click="regenerateToken"
+                />
+              </div>
+            </UFormField>
+
             <div class="p-4 rounded-lg bg-muted/5 border border-default">
               <p class="text-sm font-medium mb-2">
                 Установка:
@@ -311,12 +416,61 @@ async function onSubmit() {
                 <li>Скачайте <span class="font-mono">FreshDonate.jar</span></li>
                 <li>Поместите файл в папку <span class="font-mono">plugins/</span> сервера</li>
                 <li>Перезапустите сервер</li>
-                <li>Укажите URL панели в <span class="font-mono">plugins/FreshDonate/config.yml</span></li>
+                <li>В файле <span class="font-mono">plugins/FreshDonate/config.yml</span> укажите токен выше</li>
               </ol>
+            </div>
+
+            <USeparator />
+
+            <div>
+              <UButton
+                label="Сохранить"
+                icon="i-lucide-save"
+                :loading="deliveryLoading"
+                @click="saveDelivery"
+              />
             </div>
           </div>
         </UPageCard>
       </div>
+
+      <!-- Switch warning modal -->
+      <UModal v-model:open="showSwitchWarning">
+        <template #content>
+          <div class="p-6 space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="size-10 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
+                <UIcon
+                  name="i-lucide-triangle-alert"
+                  class="size-5 text-warning"
+                />
+              </div>
+              <div>
+                <h3 class="font-bold">
+                  Сменить способ выдачи?
+                </h3>
+                <p class="text-sm text-muted mt-0.5">
+                  Текущий способ выдачи будет заменён. Убедитесь, что новый метод настроен корректно, иначе товары не будут выдаваться.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <UButton
+                label="Отмена"
+                variant="ghost"
+                color="neutral"
+                @click="cancelSwitch"
+              />
+              <UButton
+                label="Сменить"
+                color="warning"
+                @click="confirmSwitch"
+              />
+            </div>
+          </div>
+        </template>
+      </UModal>
     </template>
   </UDashboardPanel>
 </template>
