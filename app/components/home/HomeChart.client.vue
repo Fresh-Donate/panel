@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -10,40 +10,80 @@ const props = defineProps<{
   range: Range
 }>()
 
+const config = useRuntimeConfig()
+const token = useCookie('auth_token')
+
 type DataRecord = {
   date: Date
   amount: number
+  count: number
 }
 
 const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
 
-watch([() => props.period, () => props.range], () => {
-  const dates = ({
-    daily: eachDayOfInterval,
-    weekly: eachWeekOfInterval,
-    monthly: eachMonthOfInterval
-  } as Record<Period, typeof eachDayOfInterval>)[props.period](props.range)
+watch([() => props.period, () => props.range], async () => {
+  const from = props.range.start.toISOString()
+  const to = props.range.end.toISOString()
 
-  const min = 1000
-  const max = 10000
+  try {
+    const chartData = await $fetch<{ date: string; amount: number; count: number }[]>('/stats/chart', {
+      baseURL: config.public.apiBase as string,
+      headers: { Authorization: `Bearer ${token.value}` },
+      params: { from, to, period: props.period },
+    })
 
-  data.value = dates.map(date => ({ date, amount: Math.floor(Math.random() * (max - min + 1)) + min }))
+    // Build a map from API data
+    const dataMap = new Map<string, { amount: number; count: number }>()
+    for (const item of chartData) {
+      const key = normalizeKey(new Date(item.date))
+      dataMap.set(key, { amount: item.amount, count: item.count })
+    }
+
+    // Generate all dates in range and fill gaps with 0
+    const intervals = ({
+      daily: eachDayOfInterval,
+      weekly: eachWeekOfInterval,
+      monthly: eachMonthOfInterval,
+    } as Record<Period, typeof eachDayOfInterval>)[props.period](props.range)
+
+    data.value = intervals.map((date) => {
+      const key = normalizeKey(date)
+      const entry = dataMap.get(key)
+      return {
+        date,
+        amount: entry?.amount || 0,
+        count: entry?.count || 0,
+      }
+    })
+  } catch {
+    data.value = []
+  }
 }, { immediate: true })
+
+function normalizeKey(date: Date): string {
+  if (props.period === 'monthly') {
+    return format(startOfMonth(date), 'yyyy-MM')
+  }
+  if (props.period === 'weekly') {
+    return format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  }
+  return format(startOfDay(date), 'yyyy-MM-dd')
+}
 
 const x = (_: DataRecord, i: number) => i
 const y = (d: DataRecord) => d.amount
 
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
-const formatNumber = new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format
+const formatNumber = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format
 
-const formatDate = (date: Date): string => {
+const formatDateLabel = (date: Date): string => {
   return ({
     daily: format(date, 'd MMM'),
     weekly: format(date, 'd MMM'),
-    monthly: format(date, 'MMM yyy')
+    monthly: format(date, 'MMM yyy'),
   })[props.period]
 }
 
@@ -51,11 +91,10 @@ const xTicks = (i: number) => {
   if (i === 0 || i === data.value.length - 1 || !data.value[i]) {
     return ''
   }
-
-  return formatDate(data.value[i].date)
+  return formatDateLabel(data.value[i].date)
 }
 
-const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amount)}`
+const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(d.amount)}₽ (${d.count})`
 </script>
 
 <template>
@@ -63,15 +102,16 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
     <template #header>
       <div>
         <p class="text-xs text-muted uppercase mb-1.5">
-          Revenue
+          Выручка
         </p>
         <p class="text-3xl text-highlighted font-semibold">
-          {{ formatNumber(total) }}
+          {{ formatNumber(total) }}₽
         </p>
       </div>
     </template>
 
     <VisXYContainer
+      v-if="data.length > 0"
       :data="data"
       :padding="{ top: 40 }"
       class="h-96"
@@ -102,6 +142,10 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
 
       <VisTooltip />
     </VisXYContainer>
+
+    <div v-else class="h-96 flex items-center justify-center">
+      <p class="text-sm text-muted">Нет данных за выбранный период</p>
+    </div>
   </UCard>
 </template>
 
