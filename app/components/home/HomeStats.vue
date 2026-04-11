@@ -5,7 +5,7 @@ const token = useCookie('auth_token')
 const currencySymbols: Record<string, string> = {
   RUB: '₽',
   USD: '$',
-  EUR: '€',
+  EUR: '€'
 }
 
 interface RevenueByCurrency {
@@ -24,9 +24,9 @@ interface StatsResponse {
 const { data: apiStats } = await useAsyncData<StatsResponse>('dashboard-stats', () =>
   $fetch<StatsResponse>('/stats', {
     baseURL: config.public.apiBase as string,
-    headers: { Authorization: `Bearer ${token.value}` },
+    headers: { Authorization: `Bearer ${token.value}` }
   }),
-  { default: () => ({ revenueByCurrency: [], totalPayments: 0, totalCustomers: 0 }) },
+{ default: () => ({ revenueByCurrency: [], totalPayments: 0, totalCustomers: 0 }) }
 )
 
 function formatRevenue(items: RevenueByCurrency[]): string {
@@ -55,7 +55,7 @@ function formatCommission(items: RevenueByCurrency[]): string {
         container: 'gap-y-1.5',
         wrapper: 'items-start',
         leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase',
+        title: 'font-normal text-muted text-xs uppercase'
       }"
       class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
     >
@@ -74,7 +74,7 @@ function formatCommission(items: RevenueByCurrency[]): string {
         container: 'gap-y-1.5',
         wrapper: 'items-start',
         leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase',
+        title: 'font-normal text-muted text-xs uppercase'
       }"
       class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
     >
@@ -93,7 +93,7 @@ function formatCommission(items: RevenueByCurrency[]): string {
         container: 'gap-y-1.5',
         wrapper: 'items-start',
         leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase',
+        title: 'font-normal text-muted text-xs uppercase'
       }"
       class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
     >
@@ -112,7 +112,7 @@ function formatCommission(items: RevenueByCurrency[]): string {
         container: 'gap-y-1.5',
         wrapper: 'items-start',
         leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase',
+        title: 'font-normal text-muted text-xs uppercase'
       }"
       class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
     >

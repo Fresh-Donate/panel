@@ -7,7 +7,7 @@ const token = useCookie('auth_token')
 
 const range = shallowRef<Range>({
   start: sub(new Date(), { days: 14 }),
-  end: new Date(),
+  end: new Date()
 })
 const period = ref<Period>('daily')
 const chartCurrency = ref('')
@@ -16,7 +16,7 @@ const currencyOptions = [
   { label: 'Все', value: '' },
   { label: '₽ RUB', value: 'RUB' },
   { label: '$ USD', value: 'USD' },
-  { label: '€ EUR', value: 'EUR' },
+  { label: '€ EUR', value: 'EUR' }
 ]
 
 interface RecentPayment {
@@ -49,7 +49,7 @@ const { data: statsData } = await useAsyncData('dashboard-stats-full', () =>
     baseURL: config.public.apiBase as string,
     headers: { Authorization: `Bearer ${token.value}` }
   }),
-  { default: () => ({ recentPayments: [] }) }
+{ default: () => ({ recentPayments: [] }) }
 )
 
 const recentPayments = computed(() => statsData.value.recentPayments || [])
