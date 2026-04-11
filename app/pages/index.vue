@@ -7,9 +7,17 @@ const token = useCookie('auth_token')
 
 const range = shallowRef<Range>({
   start: sub(new Date(), { days: 14 }),
-  end: new Date()
+  end: new Date(),
 })
 const period = ref<Period>('daily')
+const chartCurrency = ref('')
+
+const currencyOptions = [
+  { label: 'Все', value: '' },
+  { label: '₽ RUB', value: 'RUB' },
+  { label: '$ USD', value: 'USD' },
+  { label: '€ EUR', value: 'EUR' },
+]
 
 interface RecentPayment {
   id: string
@@ -78,9 +86,22 @@ const columns = [
     <template #body>
       <HomeStats />
 
+      <div class="flex items-center gap-2 mt-6 mb-2">
+        <UButton
+          v-for="opt in currencyOptions"
+          :key="opt.value"
+          :label="opt.label"
+          :variant="chartCurrency === opt.value ? 'soft' : 'ghost'"
+          :color="chartCurrency === opt.value ? 'primary' : 'neutral'"
+          size="xs"
+          @click="chartCurrency = opt.value"
+        />
+      </div>
+
       <HomeChart
         :period="period"
         :range="range"
+        :currency="chartCurrency || undefined"
       />
 
       <!-- Recent Payments -->

@@ -130,7 +130,7 @@ const columns = [
 
         <template #totalSpent-cell="{ row }">
           <span class="font-semibold">
-            {{ Number(row.original.totalSpent).toLocaleString() }}₽
+            {{ Number(row.original.totalSpent).toLocaleString() }}
           </span>
         </template>
 

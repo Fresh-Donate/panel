@@ -20,9 +20,13 @@ interface PaymentItem {
   customerEmail?: string
   productName: string
   productPrice: number
+  productCurrency: string
   currency: string
   quantity: number
   totalAmount: number
+  commissionPercent: number
+  commissionAmount: number
+  providerAmount: number
   status: string
   paymentOptionId: string | null
   providerId: string | null
@@ -335,15 +339,41 @@ const columns = [
             <p class="text-sm font-medium">
               {{ selected.productName }}
             </p>
+            <p class="text-xs text-muted">
+              {{ Number(selected.productPrice).toLocaleString() }}{{ currencySymbols[selected.productCurrency] || selected.productCurrency }}
+            </p>
           </div>
           <div>
             <p class="text-xs text-muted mb-0.5">
-              Сумма
+              Оплачено
             </p>
             <p class="text-sm font-semibold">
               {{
                 Number(selected.totalAmount).toLocaleString()
               }}{{ currencySymbols[selected.currency] || selected.currency }}
+            </p>
+            <p
+              v-if="selected.productCurrency !== selected.currency"
+              class="text-[10px] text-muted"
+            >
+              товар: {{ Number(selected.productPrice).toLocaleString() }}{{ currencySymbols[selected.productCurrency] || selected.productCurrency }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-muted mb-0.5">
+              Комиссия
+            </p>
+            <p class="text-sm">
+              <span class="font-medium">{{ Number(selected.commissionAmount).toLocaleString() }}{{ currencySymbols[selected.currency] || selected.currency }}</span>
+              <span class="text-muted ml-1">({{ selected.commissionPercent }}%)</span>
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-muted mb-0.5">
+              Вы получите
+            </p>
+            <p class="text-sm font-semibold text-success">
+              {{ Number(selected.providerAmount).toLocaleString() }}{{ currencySymbols[selected.currency] || selected.currency }}
             </p>
           </div>
           <div>

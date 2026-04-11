@@ -8,6 +8,7 @@ const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 const props = defineProps<{
   period: Period
   range: Range
+  currency?: string
 }>()
 
 const config = useRuntimeConfig()
@@ -23,15 +24,18 @@ const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
 
-watch([() => props.period, () => props.range], async () => {
+watch([() => props.period, () => props.range, () => props.currency], async () => {
   const from = props.range.start.toISOString()
   const to = props.range.end.toISOString()
 
   try {
+    const params: Record<string, string> = { from, to, period: props.period }
+    if (props.currency) params.currency = props.currency
+
     const chartData = await $fetch<{ date: string; amount: number; count: number }[]>('/stats/chart', {
       baseURL: config.public.apiBase as string,
       headers: { Authorization: `Bearer ${token.value}` },
-      params: { from, to, period: props.period },
+      params,
     })
 
     // Build a map from API data
@@ -79,6 +83,9 @@ const total = computed(() => data.value.reduce((acc: number, { amount }) => acc 
 
 const formatNumber = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format
 
+const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
+const currencySymbol = computed(() => currencySymbols[props.currency || 'RUB'] || props.currency || '₽')
+
 const formatDateLabel = (date: Date): string => {
   return ({
     daily: format(date, 'd MMM'),
@@ -94,7 +101,7 @@ const xTicks = (i: number) => {
   return formatDateLabel(data.value[i].date)
 }
 
-const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(d.amount)}₽ (${d.count})`
+const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(d.amount)}${currencySymbol.value} (${d.count})`
 </script>
 
 <template>
@@ -105,7 +112,7 @@ const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(
           Выручка
         </p>
         <p class="text-3xl text-highlighted font-semibold">
-          {{ formatNumber(total) }}₽
+          {{ formatNumber(total) }}{{ currencySymbol }}
         </p>
       </div>
     </template>
