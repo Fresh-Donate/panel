@@ -157,31 +157,6 @@ async function retryDelivery() {
 const deliveryLogs = computed<DeliveryLog[]>(() => selected.value?.meta?.deliveryLogs || [])
 const previousLogs = computed<DeliveryLog[]>(() => selected.value?.meta?.previousDeliveryLogs || [])
 const canRetry = computed(() => selected.value && ['paid', 'failed'].includes(selected.value.status))
-const canSimulate = computed(() => selected.value && selected.value.status === 'pending' && selected.value.providerId)
-const simulating = ref(false)
-
-async function simulateWebhook() {
-  if (!selected.value) return
-  simulating.value = true
-  try {
-    selected.value = await $fetch<PaymentItem>(`/payments/${selected.value.id}/simulate-webhook`, {
-      method: 'POST',
-      baseURL: config.public.apiBase as string,
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
-    toast.add({ title: 'Тестовый вебхук', description: 'Запрос на тестовый вебхук отправлен. Статус обновится автоматически.', color: 'success' })
-    // Poll for status update (webhook is async from Heleket)
-    setTimeout(() => {
-      if (selected.value) selectPayment(selected.value.id)
-      fetchPayments()
-    }, 3000)
-  } catch (err: any) {
-    const msg = err?.data?.error || err?.data?.message || 'Не удалось отправить тестовый вебхук'
-    toast.add({ title: 'Ошибка', description: msg, color: 'error' })
-  } finally {
-    simulating.value = false
-  }
-}
 
 const columns = [
   { accessorKey: 'productName', header: 'Товар' },
@@ -453,18 +428,6 @@ const columns = [
             </p>
           </div>
         </div>
-
-        <!-- Test webhook (test mode) -->
-        <UButton
-          v-if="canSimulate"
-          icon="i-lucide-webhook"
-          label="Тестовый вебхук"
-          color="info"
-          variant="soft"
-          block
-          :loading="simulating"
-          @click="simulateWebhook"
-        />
 
         <!-- Retry -->
         <UButton
