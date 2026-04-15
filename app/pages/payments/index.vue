@@ -169,10 +169,14 @@ async function simulateWebhook() {
       baseURL: config.public.apiBase as string,
       headers: { Authorization: `Bearer ${token.value}` }
     })
-    toast.add({ title: 'Симуляция', description: 'Оплата успешно симулирована', color: 'success' })
-    fetchPayments()
+    toast.add({ title: 'Тестовый вебхук', description: 'Запрос на тестовый вебхук отправлен. Статус обновится автоматически.', color: 'success' })
+    // Poll for status update (webhook is async from Heleket)
+    setTimeout(() => {
+      if (selected.value) selectPayment(selected.value.id)
+      fetchPayments()
+    }, 3000)
   } catch (err: any) {
-    const msg = err?.data?.error || err?.data?.message || 'Не удалось симулировать оплату'
+    const msg = err?.data?.error || err?.data?.message || 'Не удалось отправить тестовый вебхук'
     toast.add({ title: 'Ошибка', description: msg, color: 'error' })
   } finally {
     simulating.value = false
@@ -450,11 +454,11 @@ const columns = [
           </div>
         </div>
 
-        <!-- Simulate webhook (test mode) -->
+        <!-- Test webhook (test mode) -->
         <UButton
           v-if="canSimulate"
-          icon="i-lucide-play"
-          label="Симулировать оплату"
+          icon="i-lucide-webhook"
+          label="Тестовый вебхук"
           color="info"
           variant="soft"
           block
