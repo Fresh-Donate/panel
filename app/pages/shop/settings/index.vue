@@ -40,6 +40,7 @@ const colorItems = colorNames.map(color => ({
 const schema = z.object({
   name: z.string().min(1, 'Название магазина обязательно').max(64, 'Максимум 64 символа'),
   description: z.string().max(500, 'Максимум 500 символов').optional(),
+  ip: z.string().min(1, 'Минимум 1 символ').max(64, 'Максимум 64 символа').optional(),
   color: z.string().min(1, 'Выберите цвет')
 })
 
@@ -48,6 +49,7 @@ type ShopSettingsSchema = z.output<typeof schema>
 const state = reactive<ShopSettingsSchema>({
   name: '',
   description: '',
+  ip: 'play.example.com',
   color: 'sky'
 })
 
@@ -63,6 +65,7 @@ async function fetchSettings() {
     })
     state.name = data.name
     state.description = data.description || ''
+    state.ip = data.ip
     state.color = data.color
   } catch {
     toast.add({
@@ -90,11 +93,13 @@ async function onSubmit() {
       body: {
         name: state.name,
         description: state.description,
+        ip: state.ip,
         color: state.color
       }
     })
     state.name = data.name
     state.description = data.description || ''
+    state.ip = data.ip
     state.color = data.color
     toast.add({
       title: 'Настройки сохранены',
@@ -173,6 +178,21 @@ async function onSubmit() {
               placeholder="Расскажите о вашем магазине..."
               :rows="3"
               autoresize
+              class="w-full max-w-lg"
+            />
+          </UFormField>
+
+          <USeparator />
+
+          <UFormField
+            label="Адрес сервера"
+            name="ip"
+            description="IP для подключения к вашему серверу"
+          >
+            <UInput
+              v-model="state.ip"
+              placeholder="Например: play.example.com"
+              icon="i-lucide-link"
               class="w-full max-w-lg"
             />
           </UFormField>
