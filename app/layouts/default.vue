@@ -86,13 +86,8 @@ const links = [[{
     }
   }]
 }], [{
-  label: 'Feedback',
-  icon: 'i-lucide-message-circle',
-  to: 'https://github.com/Fresh-Donate/panel',
-  target: '_blank'
-}, {
-  label: 'Help & Support',
-  icon: 'i-lucide-info',
+  label: 'Проект на Github',
+  icon: 'i-lucide-github',
   to: 'https://github.com/Fresh-Donate/panel',
   target: '_blank'
 }]] satisfies NavigationMenuItem[][]
