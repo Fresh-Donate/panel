@@ -1,3 +1,14 @@
+import { execSync } from 'node:child_process'
+
+let buildCommit = process.env.GIT_COMMIT || ''
+if (!buildCommit) {
+  try {
+    buildCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+  } catch {
+    buildCommit = 'unknown'
+  }
+}
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
 
@@ -14,8 +25,10 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
+    buildCommit,
     public: {
-      apiBase: 'http://localhost:3001'
+      apiBase: 'http://localhost:3001',
+      shopBase: 'http://localhost:3002'
     }
   },
 

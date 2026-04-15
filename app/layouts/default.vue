@@ -2,8 +2,37 @@
 import type { NavigationMenuItem } from '@nuxt/ui'
 
 const route = useRoute()
+const config = useRuntimeConfig()
 
 const open = ref(false)
+
+// Build info
+interface ServiceInfo { name: string, version: string, commit: string }
+
+const services = ref<ServiceInfo[]>([])
+
+onMounted(async () => {
+  const results: ServiceInfo[] = []
+
+  const endpoints = [
+    { url: '/api/version', label: 'Panel' },
+    { url: `${config.public.apiBase}`, label: 'Backend' },
+    { url: `${config.public.shopBase}/api/version`, label: 'Shop' }
+  ]
+
+  await Promise.allSettled(
+    endpoints.map(async (ep) => {
+      try {
+        const data = await $fetch<{ name?: string, version: string, commit: string }>(ep.url)
+        results.push({ name: ep.label, version: data.version, commit: data.commit })
+      } catch {
+        // skip unreachable services
+      }
+    })
+  )
+
+  services.value = results
+})
 
 const links = [[{
   label: 'Главная',
@@ -145,7 +174,9 @@ const groups = computed(() => [{
         <UDashboardSearchButton
           :collapsed="collapsed"
           class="bg-transparent ring-default"
-        />
+        >
+          Найти...
+        </UDashboardSearchButton>
 
         <UNavigationMenu
           :collapsed="collapsed"
@@ -162,6 +193,38 @@ const groups = computed(() => [{
           tooltip
           class="mt-auto"
         />
+      </template>
+
+      <template #footer="{ collapsed }">
+        <div
+          v-if="!collapsed && services.length > 0"
+          class="p-1 text-[10px] text-muted font-mono leading-relaxed w-full"
+        >
+          <div
+            v-for="svc in services"
+            :key="svc.name"
+            class="grid grid-cols-3 gap-2"
+          >
+            <span>{{ svc.name }}</span>
+            <span class="text-center">{{ svc.version }}</span>
+            <span class="text-muted/60 text-right">{{ svc.commit }}</span>
+          </div>
+        </div>
+        <div
+          v-else-if="collapsed && services.length > 0"
+          class="flex justify-center items-center py-2 w-full"
+        >
+          <UTooltip
+            :text="services.map(s => `${s.name} ${s.version} (${s.commit})`).join(' | ')"
+          >
+            <UButton
+              icon="i-lucide-info"
+              variant="ghost"
+              color="neutral"
+              size="sm"
+            />
+          </UTooltip>
+        </div>
       </template>
     </UDashboardSidebar>
 
