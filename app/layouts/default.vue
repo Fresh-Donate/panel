@@ -7,7 +7,7 @@ const config = useRuntimeConfig()
 const open = ref(false)
 
 // Build info
-interface ServiceInfo { name: string, version: string, commit: string }
+interface ServiceInfo { name: string, version: string }
 
 const services = ref<ServiceInfo[]>([])
 
@@ -23,8 +23,8 @@ onMounted(async () => {
   await Promise.allSettled(
     endpoints.map(async (ep) => {
       try {
-        const data = await $fetch<{ name?: string, version: string, commit: string }>(ep.url)
-        results.push({ name: ep.label, version: data.version, commit: data.commit })
+        const data = await $fetch<{ version: string }>(ep.url)
+        results.push({ name: ep.label, version: data.version })
       } catch {
         // skip unreachable services
       }
@@ -203,11 +203,10 @@ const groups = computed(() => [{
           <div
             v-for="svc in services"
             :key="svc.name"
-            class="grid grid-cols-3 gap-2"
+            class="flex items-center justify-between"
           >
             <span>{{ svc.name }}</span>
-            <span class="text-center">{{ svc.version }}</span>
-            <span class="text-muted/60 text-right">{{ svc.commit }}</span>
+            <span class="text-muted/60">{{ svc.version }}</span>
           </div>
         </div>
         <div
@@ -215,7 +214,7 @@ const groups = computed(() => [{
           class="flex justify-center items-center py-2 w-full"
         >
           <UTooltip
-            :text="services.map(s => `${s.name} ${s.version} (${s.commit})`).join(' | ')"
+            :text="services.map(s => `${s.name} ${s.version}`).join(' | ')"
           >
             <UButton
               icon="i-lucide-info"
