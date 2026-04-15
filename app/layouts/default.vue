@@ -175,7 +175,14 @@ const groups = computed(() => [{
           :collapsed="collapsed"
           class="bg-transparent ring-default"
         >
-          Найти...
+          <div class="relative w-full h-full">
+            <p
+              v-if="!collapsed"
+              class="absolute"
+            >
+              Найти...
+            </p>
+          </div>
         </UDashboardSearchButton>
 
         <UNavigationMenu
