@@ -103,12 +103,14 @@ const links = [[{
     }
   }, {
     label: 'Уведомления',
+    badge: 'Soon',
     to: '/settings/notifications',
     onSelect: () => {
       open.value = false
     }
   }, {
     label: 'Безопасность',
+    badge: 'Soon',
     to: '/settings/security',
     onSelect: () => {
       open.value = false
