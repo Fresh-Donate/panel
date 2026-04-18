@@ -1,28 +1,42 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
 
   modules: [
+    '@nuxt/eslint',
     '@nuxt/ui',
     '@nuxt/image',
     '@nuxt/icon',
     '@pinia/nuxt',
+    '@vueuse/nuxt'
   ],
+  devtools: { enabled: true },
 
   css: ['~/assets/css/main.css'],
 
-  icon: {
-    serverBundle: 'remote',
-  },
-
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001',
-    },
+      apiBase: 'http://localhost:3001',
+      shopBase: 'http://localhost:3002'
+    }
   },
 
   devServer: {
-    port: 3000,
+    port: 3000
   },
-});
+  compatibilityDate: '2025-07-15',
+
+  eslint: {
+    config: {
+      stylistic: {
+        commaDangle: 'never',
+        braceStyle: '1tbs'
+      }
+    }
+  },
+
+  icon: {
+    mode: 'css',
+    cssLayer: 'base',
+    componentName: 'Icon'
+  }
+})

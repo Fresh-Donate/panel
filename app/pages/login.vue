@@ -1,42 +1,59 @@
-<template>
-  <UCard>
-    <template #header>
-      <h2 class="text-lg font-semibold text-center">Вход в панель</h2>
-    </template>
-
-    <form class="space-y-4" @submit.prevent="handleLogin">
-      <UFormField label="Email">
-        <UInput v-model="email" type="email" placeholder="admin@example.com" required />
-      </UFormField>
-
-      <UFormField label="Пароль">
-        <UInput v-model="password" type="password" placeholder="••••••••" required />
-      </UFormField>
-
-      <UButton type="submit" block :loading="loading">
-        Войти
-      </UButton>
-    </form>
-  </UCard>
-</template>
-
 <script setup lang="ts">
-definePageMeta({ layout: 'auth' });
+import * as z from 'zod'
+import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
 
-const auth = useAuthStore();
-const email = ref('');
-const password = ref('');
-const loading = ref(false);
+definePageMeta({ layout: 'auth' })
 
-async function handleLogin() {
-  loading.value = true;
+const auth = useAuthStore()
+const toast = useToast()
+
+const fields: AuthFormField[] = [{
+  name: 'login',
+  type: 'name',
+  label: 'Логин',
+  placeholder: 'Введите логин',
+  required: true
+}, {
+  name: 'password',
+  label: 'Пароль',
+  type: 'password',
+  placeholder: 'Введите пароль',
+  required: true
+}]
+
+const schema = z.object({
+  login: z.string('Требуется логин'),
+  password: z.string('Требуется пароль')
+})
+
+type Schema = z.output<typeof schema>
+
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  const data = payload.data
   try {
-    await auth.login(email.value, password.value);
-    navigateTo('/');
+    await auth.login(data.login, data.password)
+    navigateTo('/')
   } catch (e: any) {
-    console.error('Login failed:', e);
-  } finally {
-    loading.value = false;
+    console.error(e)
+    toast.add({ title: 'Ошибка входа', description: e?.data?.message || 'Неверный логин или пароль', color: 'error', icon: 'lucide:shield-alert' })
   }
 }
 </script>
+
+<template>
+  <div class="flex flex-col items-center justify-center gap-4 p-4">
+    <UPageCard class="w-full max-w-md">
+      <UAuthForm
+        :schema="schema"
+        title="FreshDonate"
+        description="Введите данные от панели из environment"
+        icon="i-lucide-user"
+        :fields="fields"
+        :submit="{
+          label: 'Войти'
+        }"
+        @submit="onSubmit"
+      />
+    </UPageCard>
+  </div>
+</template>

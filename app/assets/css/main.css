@@ -1,2 +1,7 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+@theme static {
+    --font-sans: 'Montserrat', 'Fira Mono', monospace;
+    --font-code: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+}
