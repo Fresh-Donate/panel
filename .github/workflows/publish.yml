@@ -1,91 +1,105 @@
-name: Build & Publish
+name: FreshDonate Panel - Release
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v*.*.*"
-  pull_request:
-    branches:
-      - main
+  release:
+    types: [published]
+
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  lint-and-build:
-    name: Lint & Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build Nuxt
-        run: npm run build
-
-  publish:
-    name: Build & Publish Image
-    needs: lint-and-build
-    if: github.event_name != 'pull_request'
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
-      - name: Checkout
+      - name: 🧾 Checkout main branch
         uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to GHCR
+      - name: 🔖 Get latest tag
+        id: latest-tag
+        uses: JinoArch/get-latest-tag@latest
+
+      - name: 🏷️ Define Build Args
+        id: vars
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
+          IMAGE_TAGS="${IMAGE_REPO}:latest,${IMAGE_REPO}:${GITHUB_REF_NAME}"
+
+          echo "image_repo=${IMAGE_REPO}" >> $GITHUB_OUTPUT
+          echo "image_tags=${IMAGE_TAGS}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+          echo "✅ Tags: ${IMAGE_TAGS}"
+          echo "✅ SHA: ${SHORT_SHA}"
+
+      - name: 🛠️ Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push
+      - name: 🏗️ Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ steps.vars.outputs.image_repo }}:latest
+            ${{ steps.vars.outputs.image_repo }}:${{ github.ref_name }}
+          build-args: |
+            BUILD_TIME=${{ steps.vars.outputs.build_time }}
+            BUILD_BRANCH=main
+            BUILD_COMMIT=${{ steps.vars.outputs.short_sha }}
+            BUILD_TAG=${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: false
+
+      - name: 📦 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: false
+          body: |
+            # 🎛️ FreshDonate Panel ${{ github.ref_name }}
+
+            Админ панель платформы FreshDonate.
+
+            ---
+
+            - [Compare changes (${{ steps.latest-tag.outputs.previousTag }}...${{ steps.latest-tag.outputs.latestTag }})](https://github.com/${{ github.repository }}/compare/${{ steps.latest-tag.outputs.previousTag }}...${{ steps.latest-tag.outputs.latestTag }})
+
+            ---
+
+            ## 🐳 Docker Images
+
+            ### Latest:
+            ```
+            ${{ steps.vars.outputs.image_repo }}:latest
+            ```
+
+            ### Versioned:
+            ```
+            ${{ steps.vars.outputs.image_repo }}:${{ github.ref_name }}
+            ```
+
+            ### Build info:
+            - **Commit:** `${{ steps.vars.outputs.short_sha }}`
+            - **Built at:** `${{ steps.vars.outputs.build_time }}`
+            - **Platforms:** `linux/amd64`, `linux/arm64`
+          draft: false
+          prerelease: false
