@@ -374,18 +374,20 @@ function regenerateToken() {
                   FreshDonate Plugin
                 </p>
                 <p class="text-sm text-muted mt-0.5">
-                  Для Spigot / Paper 1.16+
-                </p>
-                <p class="text-xs text-muted mt-1">
-                  Версия 1.0.0 • Обновлено недавно
+                  Для Spigot / Paper 1.13.2+
                 </p>
               </div>
-              <UButton
-                label="Скачать .jar"
-                icon="i-lucide-download"
-                variant="soft"
-                disabled
-              />
+              <NuxtLink
+                to="https://github.com/Fresh-Donate/plugin/releases/latest"
+                target="_blank"
+              >
+                <UButton
+                  label="Скачать .jar"
+                  icon="i-lucide-download"
+                  variant="soft"
+                  class="cursor-pointer"
+                />
+              </NuxtLink>
             </div>
 
             <UFormField
