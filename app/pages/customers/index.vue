@@ -1,11 +1,16 @@
 <script setup lang="ts">
+interface CustomerCurrencyStats {
+  currency: string
+  totalSpent: number
+  purchaseCount: number
+}
 interface CustomerItem {
   id: string
   nickname: string
   email: string
-  totalSpent: number
-  purchaseCount: number
+  stats: CustomerCurrencyStats[]
   createdAt: string
+  updatedAt: string
 }
 
 const config = useRuntimeConfig()
@@ -125,12 +130,12 @@ const columns = [
         </template>
 
         <template #purchaseCount-cell="{ row }">
-          <span>{{ row.original.purchaseCount }}</span>
+          <span>{{ row.original.stats.reduce((s, x) => s + x.purchaseCount, 0) }} шт.</span>
         </template>
 
         <template #totalSpent-cell="{ row }">
           <span class="font-semibold">
-            {{ Number(row.original.totalSpent).toLocaleString() }}
+            {{ row.original.stats.map((s) => `${Number(s.totalSpent).toLocaleString()} ${s.currency}`).join(', ') }}
           </span>
         </template>
 
