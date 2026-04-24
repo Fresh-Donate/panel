@@ -31,13 +31,6 @@ export interface Stat {
   formatter?: (value: number) => string
 }
 
-export interface PaymentMethod {
-  id: string
-  name: string
-  commission: number
-  enabled: boolean
-}
-
 export type CommissionMode = 'seller' | 'buyer' | 'split'
 
 export interface CommissionRule {
@@ -59,7 +52,12 @@ export interface PaymentProvider {
    */
   testMode: boolean
   credentials: Record<string, string>
-  methods: PaymentMethod[]
+  /**
+   * Default commission percent the provider charges. Used as an up-front
+   * estimate at checkout time; the real fee from webhook data overwrites it
+   * once the payment completes.
+   */
+  commissionPercent: number
   commissionRule: CommissionRule
   supportedCurrencies: string[]
 }

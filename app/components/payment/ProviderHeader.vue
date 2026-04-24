@@ -10,16 +10,6 @@ const emit = defineEmits<{
   'update:testMode': [value: boolean]
 }>()
 
-const enabledMethodsCount = computed(() =>
-  props.provider.methods.filter(m => m.enabled).length
-)
-
-const avgCommission = computed(() => {
-  const enabled = props.provider.methods.filter(m => m.enabled)
-  if (enabled.length === 0) return 0
-  return +(enabled.reduce((sum, m) => sum + m.commission, 0) / enabled.length).toFixed(2)
-})
-
 // Providers that support a dedicated test / sandbox environment.
 // Others will still accept the `testMode` field on the API but the toggle
 // wouldn't do anything meaningful, so we hide it.
@@ -63,18 +53,10 @@ const supportsTestMode = computed(() =>
     >
       <div>
         <p class="text-xs text-muted">
-          Методов включено
+          Комиссия по умолчанию
         </p>
         <p class="text-lg font-bold">
-          {{ enabledMethodsCount }} / {{ provider.methods.length }}
-        </p>
-      </div>
-      <div>
-        <p class="text-xs text-muted">
-          Средняя комиссия
-        </p>
-        <p class="text-lg font-bold">
-          {{ avgCommission }}%
+          {{ provider.commissionPercent }}%
         </p>
       </div>
       <div>
