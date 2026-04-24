@@ -7,18 +7,23 @@ definePageMeta({ layout: 'auth' })
 const auth = useAuthStore()
 const toast = useToast()
 
+// `autocomplete` hints let browsers offer to save / autofill the login.
+// `type: 'text'` is used instead of `'name'` so the browser treats it as a
+// username field (combined with autocomplete="username").
 const fields: AuthFormField[] = [{
   name: 'login',
-  type: 'name',
+  type: 'text',
   label: 'Логин',
   placeholder: 'Введите логин',
-  required: true
+  required: true,
+  autocomplete: 'username'
 }, {
   name: 'password',
   label: 'Пароль',
   type: 'password',
   placeholder: 'Введите пароль',
-  required: true
+  required: true,
+  autocomplete: 'current-password'
 }]
 
 const schema = z.object({
@@ -28,10 +33,38 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>
 
+/**
+ * Ask the browser to remember the credentials.
+ *
+ * Chromium-family browsers surface the "Save password?" prompt on a regular
+ * `<form>` POST submit, but `UAuthForm` handles the submit with JS (no real
+ * navigation), so we nudge them via the Credential Management API. Firefox /
+ * Safari ignore this call silently and rely on their own heuristics, which
+ * the `autocomplete="username" / "current-password"` attributes on the fields
+ * are enough to trigger.
+ */
+async function rememberCredentials(loginValue: string, password: string) {
+  if (typeof window === 'undefined') return
+  // PasswordCredential is Chromium-only at time of writing.
+  const PasswordCredentialCtor = (window as any).PasswordCredential
+  if (!PasswordCredentialCtor || !navigator.credentials?.store) return
+  try {
+    const cred = new PasswordCredentialCtor({
+      id: loginValue,
+      password,
+      name: loginValue
+    })
+    await navigator.credentials.store(cred)
+  } catch {
+    // Non-fatal: the browser may decline (private mode, user rejected, etc.)
+  }
+}
+
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   const data = payload.data
   try {
     await auth.login(data.login, data.password)
+    await rememberCredentials(data.login, data.password)
     navigateTo('/')
   } catch (e: any) {
     console.error(e)
