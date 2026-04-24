@@ -52,6 +52,12 @@ export interface PaymentProvider {
   description: string
   icon: string
   enabled: boolean
+  /**
+   * Per-provider "test mode" flag. When true, the provider talks to its
+   * sandbox / staging environment. Providers that don't support a sandbox
+   * simply ignore the flag.
+   */
+  testMode: boolean
   credentials: Record<string, string>
   methods: PaymentMethod[]
   commissionRule: CommissionRule

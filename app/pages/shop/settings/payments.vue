@@ -51,6 +51,7 @@ async function saveProvider() {
       headers: { Authorization: `Bearer ${token.value}` },
       body: {
         enabled: provider.enabled,
+        testMode: provider.testMode,
         credentials: provider.credentials,
         methods: provider.methods,
         commissionRule: provider.commissionRule
@@ -111,6 +112,7 @@ async function saveProvider() {
           <PaymentProviderHeader
             :provider="selectedProvider"
             @update:enabled="selectedProvider.enabled = $event"
+            @update:test-mode="selectedProvider.testMode = $event"
           />
 
           <template v-if="selectedProvider.enabled">

@@ -7,6 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:enabled': [value: boolean]
+  'update:testMode': [value: boolean]
 }>()
 
 const enabledMethodsCount = computed(() =>
@@ -18,6 +19,14 @@ const avgCommission = computed(() => {
   if (enabled.length === 0) return 0
   return +(enabled.reduce((sum, m) => sum + m.commission, 0) / enabled.length).toFixed(2)
 })
+
+// Providers that support a dedicated test / sandbox environment.
+// Others will still accept the `testMode` field on the API but the toggle
+// wouldn't do anything meaningful, so we hide it.
+const PROVIDERS_WITH_SANDBOX = ['wata']
+const supportsTestMode = computed(() =>
+  PROVIDERS_WITH_SANDBOX.includes(props.provider.providerId)
+)
 </script>
 
 <template>
@@ -76,6 +85,31 @@ const avgCommission = computed(() => {
           {{ provider.supportedCurrencies.join(', ') }}
         </p>
       </div>
+    </div>
+
+    <div
+      v-if="provider.enabled && supportsTestMode"
+      class="flex items-center justify-between mt-4 pt-4 border-t border-default"
+    >
+      <div class="flex items-center gap-3">
+        <UIcon
+          name="i-lucide-flask-conical"
+          class="size-5"
+          :class="provider.testMode ? 'text-warning' : 'text-muted'"
+        />
+        <div>
+          <p class="text-sm font-medium">
+            Тестовый режим
+          </p>
+          <p class="text-xs text-muted">
+            Запросы пойдут в sandbox платёжной системы. Реальные деньги не списываются.
+          </p>
+        </div>
+      </div>
+      <USwitch
+        :model-value="provider.testMode"
+        @update:model-value="emit('update:testMode', $event)"
+      />
     </div>
   </UPageCard>
 </template>

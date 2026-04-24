@@ -17,6 +17,9 @@ const credentialLabels: Record<string, Record<string, { label: string, placehold
   heleket: {
     apiKey: { label: 'API Key', placeholder: 'Введите API ключ из Heleket' },
     merchantId: { label: 'Merchant ID', placeholder: 'Введите идентификатор мерчанта' }
+  },
+  wata: {
+    apiKey: { label: 'Access Token', placeholder: 'JWT-токен из кабинета Wata (prod или sandbox)' }
   }
 }
 
