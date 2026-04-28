@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
+
 interface CustomerCurrencyStats {
   currency: string
   totalSpent: number
@@ -13,6 +15,12 @@ interface CustomerItem {
   updatedAt: string
 }
 
+// Columns the user is allowed to sort by. Total spent is intentionally
+// excluded — customers can have stats in multiple currencies, so a single
+// numeric ordering is meaningless without picking a currency first.
+type SortableColumn = 'nickname' | 'email' | 'purchaseCount' | 'createdAt'
+type SortDirection = 'asc' | 'desc'
+
 const config = useRuntimeConfig()
 const token = useCookie('auth_token')
 const toast = useToast()
@@ -24,6 +32,9 @@ const search = ref('')
 const page = ref(1)
 const pageSize = 20
 
+const sortBy = ref<SortableColumn>('createdAt')
+const sortOrder = ref<SortDirection>('desc')
+
 async function fetchCustomers() {
   fetching.value = true
   try {
@@ -31,6 +42,8 @@ async function fetchCustomers() {
     if (search.value) params.set('search', search.value)
     params.set('limit', String(pageSize))
     params.set('offset', String((page.value - 1) * pageSize))
+    params.set('sortBy', sortBy.value)
+    params.set('sortOrder', sortOrder.value)
 
     const data = await $fetch<{ items: CustomerItem[], total: number }>(`/customers?${params}`, {
       baseURL: config.public.apiBase as string,
@@ -59,6 +72,25 @@ watch(search, () => {
 
 watch(page, fetchCustomers)
 
+// Clicking a column either flips the direction (if already sorted by it)
+// or switches to that column with a sensible default direction. Strings go
+// asc-first (A→Z), numeric / date go desc-first (newest / largest first).
+function toggleSort(column: SortableColumn) {
+  if (sortBy.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = column
+    sortOrder.value = column === 'nickname' || column === 'email' ? 'asc' : 'desc'
+  }
+  page.value = 1
+  fetchCustomers()
+}
+
+function sortIcon(column: SortableColumn): string {
+  if (sortBy.value !== column) return 'i-lucide-arrow-up-down'
+  return sortOrder.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down'
+}
+
 const totalPages = computed(() => Math.ceil(total.value / pageSize))
 
 function formatDate(iso: string): string {
@@ -71,12 +103,28 @@ function formatDate(iso: string): string {
   })
 }
 
+const UButton = resolveComponent('UButton')
+
+// Header render functions read the sort refs at render time, so swapping
+// the sort direction re-renders only the header without rebuilding columns.
+function sortableHeader(column: SortableColumn, label: string) {
+  return () => h(UButton, {
+    color: 'neutral',
+    variant: 'ghost',
+    size: 'sm',
+    label,
+    trailingIcon: sortIcon(column),
+    class: '-mx-2 data-[state=open]:bg-elevated',
+    onClick: () => toggleSort(column)
+  })
+}
+
 const columns = [
-  { accessorKey: 'nickname', header: 'Никнейм' },
-  { accessorKey: 'email', header: 'Email' },
-  { accessorKey: 'purchaseCount', header: 'Покупок' },
+  { accessorKey: 'nickname', header: sortableHeader('nickname', 'Никнейм') },
+  { accessorKey: 'email', header: sortableHeader('email', 'Email') },
+  { accessorKey: 'purchaseCount', header: sortableHeader('purchaseCount', 'Покупок') },
   { accessorKey: 'totalSpent', header: 'Потрачено' },
-  { accessorKey: 'createdAt', header: 'Зарегистрирован' }
+  { accessorKey: 'createdAt', header: sortableHeader('createdAt', 'Зарегистрирован') }
 ]
 </script>
 
