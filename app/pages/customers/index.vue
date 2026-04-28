@@ -15,10 +15,11 @@ interface CustomerItem {
   updatedAt: string
 }
 
-// Columns the user is allowed to sort by. Total spent is intentionally
-// excluded — customers can have stats in multiple currencies, so a single
-// numeric ordering is meaningless without picking a currency first.
-type SortableColumn = 'nickname' | 'email' | 'purchaseCount' | 'createdAt'
+// Sortable columns. `totalSpent` is sorted on the server using the
+// admin-configured currency rates (see "Курсы валют" in общие настройки) —
+// each payment's amount is normalised to RUB before summing, so customers
+// with mixed-currency stats compare correctly.
+type SortableColumn = 'nickname' | 'email' | 'purchaseCount' | 'totalSpent' | 'createdAt'
 type SortDirection = 'asc' | 'desc'
 
 const config = useRuntimeConfig()
@@ -80,6 +81,9 @@ function toggleSort(column: SortableColumn) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
     sortBy.value = column
+    // Strings: A→Z first feels natural. Numeric / date: largest / newest
+    // first is what the admin almost always wants — top customers, latest
+    // signups, etc.
     sortOrder.value = column === 'nickname' || column === 'email' ? 'asc' : 'desc'
   }
   page.value = 1
@@ -123,7 +127,7 @@ const columns = [
   { accessorKey: 'nickname', header: sortableHeader('nickname', 'Никнейм') },
   { accessorKey: 'email', header: sortableHeader('email', 'Email') },
   { accessorKey: 'purchaseCount', header: sortableHeader('purchaseCount', 'Покупок') },
-  { accessorKey: 'totalSpent', header: 'Потрачено' },
+  { accessorKey: 'totalSpent', header: sortableHeader('totalSpent', 'Потрачено') },
   { accessorKey: 'createdAt', header: sortableHeader('createdAt', 'Зарегистрирован') }
 ]
 </script>
