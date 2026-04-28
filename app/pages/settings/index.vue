@@ -10,12 +10,25 @@ const schema = z.object({
 })
 
 type DeliveryMethod = 'rcon' | 'plugin'
+type SupportedCurrency = 'RUB' | 'USD' | 'EUR'
+
+const SUPPORTED_CURRENCIES: SupportedCurrency[] = ['RUB', 'USD', 'EUR']
+
+// Mirror of backend `defaultRatesFor` — small constant, kept duplicated
+// instead of fetched so the form can re-seed instantly when the admin
+// switches the base, without a round trip.
+const DEFAULT_RATES_BY_BASE: Record<SupportedCurrency, Record<string, number>> = {
+  RUB: { USD: 95, EUR: 100 },
+  USD: { RUB: 0.0105, EUR: 1.05 },
+  EUR: { RUB: 0.01, USD: 0.95 }
+}
 
 interface SettingsData {
   demo_payments: boolean
   delivery_method: DeliveryMethod
   rcon_config: { host: string, port: number, password: string }
   plugin_config: { token: string }
+  base_currency: SupportedCurrency
   currency_rates: Record<string, number>
 }
 
@@ -23,24 +36,20 @@ const state = reactive({
   demo_payments: false
 })
 
-// Edited as an ordered list because keys can be renamed in place. Converted
-// to/from `Record<string, number>` only at the API boundary. Empty rows are
-// allowed in the UI (so the user can build up new entries) and dropped on
-// submit.
-interface CurrencyRateRow {
-  code: string
-  rate: number | null
-}
-
-const currencyRates = ref<CurrencyRateRow[]>([])
+const baseCurrency = ref<SupportedCurrency>('RUB')
+const rates = ref<Record<string, number>>({ ...DEFAULT_RATES_BY_BASE.RUB })
 const ratesLoading = ref(false)
 
-function addRate() {
-  currencyRates.value.push({ code: '', rate: null })
-}
+const baseCurrencyItems = SUPPORTED_CURRENCIES.map(c => ({ label: c, value: c }))
 
-function removeRate(index: number) {
-  currencyRates.value.splice(index, 1)
+const rateCurrencies = computed(() => SUPPORTED_CURRENCIES.filter(c => c !== baseCurrency.value))
+
+function setBaseCurrency(newBase: SupportedCurrency) {
+  if (newBase === baseCurrency.value) return
+  baseCurrency.value = newBase
+  // Stored rates were "X per old base" — meaningless under the new base.
+  // Reseed from defaults so the form never carries forward broken numbers.
+  rates.value = { ...DEFAULT_RATES_BY_BASE[newBase] }
 }
 
 const deliveryMethod = ref<DeliveryMethod>('rcon')
@@ -76,10 +85,8 @@ async function fetchSettings() {
     rconState.port = data.rcon_config?.port || 25575
     rconState.password = data.rcon_config?.password || ''
     pluginState.token = data.plugin_config?.token || ''
-    currencyRates.value = Object.entries(data.currency_rates || {}).map(([code, rate]) => ({
-      code,
-      rate: Number(rate)
-    }))
+    baseCurrency.value = data.base_currency || 'RUB'
+    rates.value = { ...data.currency_rates }
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -167,32 +174,28 @@ async function saveDelivery() {
   }
 }
 
-async function onSubmitRates() {
+async function onSubmitCurrency() {
   ratesLoading.value = true
   try {
-    // Drop blank rows, RUB (anchor), and non-positive numbers — backend
-    // would reject them anyway. Codes are uppercased so "usd" works.
     const payload: Record<string, number> = {}
-    for (const row of currencyRates.value) {
-      const code = row.code.trim().toUpperCase()
-      if (!code || code === 'RUB') continue
-      const rate = Number(row.rate)
-      if (!Number.isFinite(rate) || rate <= 0) continue
-      payload[code] = rate
+    for (const code of rateCurrencies.value) {
+      const rate = Number(rates.value[code])
+      if (Number.isFinite(rate) && rate > 0) payload[code] = rate
     }
     const data = await $fetch<SettingsData>('/settings', {
       baseURL: config.public.apiBase as string,
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
-      body: { currency_rates: payload }
+      body: {
+        base_currency: baseCurrency.value,
+        currency_rates: payload
+      }
     })
-    currencyRates.value = Object.entries(data.currency_rates || {}).map(([code, rate]) => ({
-      code,
-      rate: Number(rate)
-    }))
-    toast.add({ title: 'Курсы валют сохранены', icon: 'i-lucide-check-circle', color: 'success' })
+    baseCurrency.value = data.base_currency
+    rates.value = { ...data.currency_rates }
+    toast.add({ title: 'Настройки валют сохранены', icon: 'i-lucide-check-circle', color: 'success' })
   } catch {
-    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить курсы.', icon: 'i-lucide-alert-circle', color: 'error' })
+    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить настройки валют.', icon: 'i-lucide-alert-circle', color: 'error' })
   } finally {
     ratesLoading.value = false
   }
@@ -265,52 +268,50 @@ function regenerateToken() {
           </UForm>
         </UPageCard>
 
-        <!-- Currency rates -->
+        <!-- Currency -->
         <UPageCard
-          title="Курсы валют"
-          description="Сколько рублей в одной единице валюты. Используется для пересчёта статистики и сортировок (например, по сумме покупок). RUB — базовая валюта и всегда равна 1."
+          title="Валюты"
+          description="Базовая валюта и курсы конвертации. Используются для пересчёта статистики и сортировок (например, по сумме покупок)."
         >
-          <div class="space-y-3">
-            <div class="space-y-2 max-w-lg">
-              <div
-                v-for="(row, idx) in currencyRates"
-                :key="idx"
-                class="flex items-center gap-2"
-              >
-                <UInput
-                  v-model="row.code"
-                  placeholder="USD"
-                  class="w-24"
-                  :maxlength="8"
-                />
-                <span class="text-muted text-sm">=</span>
-                <UInput
-                  v-model.number="row.rate"
-                  type="number"
-                  step="0.0001"
-                  min="0"
-                  placeholder="95"
-                  class="flex-1"
-                />
-                <span class="text-muted text-sm">RUB</span>
-                <UButton
-                  icon="i-lucide-trash-2"
-                  variant="ghost"
-                  color="error"
-                  size="sm"
-                  square
-                  @click="removeRate(idx)"
-                />
-              </div>
-              <UButton
-                icon="i-lucide-plus"
-                variant="soft"
-                color="neutral"
-                size="sm"
-                label="Добавить валюту"
-                @click="addRate"
+          <div class="space-y-6">
+            <UFormField
+              label="Базовая валюта"
+              description="К ней приводятся все суммы при вычислениях. При смене валюты курсы будут пересозданы со значениями по умолчанию."
+            >
+              <USelectMenu
+                :model-value="baseCurrency"
+                :items="baseCurrencyItems"
+                value-key="value"
+                class="w-full max-w-xs"
+                @update:model-value="setBaseCurrency"
               />
-            </div>
+            </UFormField>
+
+            <USeparator />
+
+            <UFormField
+              label="Курсы валют"
+              :description="`Сколько ${baseCurrency} в одной единице валюты.`"
+            >
+              <div class="space-y-2 max-w-lg">
+                <div
+                  v-for="code in rateCurrencies"
+                  :key="code"
+                  class="flex items-center gap-3"
+                >
+                  <span class="w-16 font-mono text-sm">1 {{ code }}</span>
+                  <span class="text-muted text-sm">=</span>
+                  <UInput
+                    v-model.number="rates[code]"
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    class="flex-1"
+                  />
+                  <span class="w-12 font-mono text-muted text-sm">{{ baseCurrency }}</span>
+                </div>
+              </div>
+            </UFormField>
 
             <USeparator />
 
@@ -319,7 +320,7 @@ function regenerateToken() {
                 label="Сохранить"
                 icon="i-lucide-save"
                 :loading="ratesLoading"
-                @click="onSubmitRates"
+                @click="onSubmitCurrency"
               />
             </div>
           </div>
