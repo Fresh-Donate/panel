@@ -50,19 +50,6 @@ const schema = z.object({
 
 type ShopSettingsSchema = z.output<typeof schema>
 
-interface ApiShopSettings extends ShopSettingsSchema {
-  currencyRates?: Record<string, number>
-}
-
-// Edited as an ordered list because keys can be renamed in place. We convert
-// to/from `Record<string, number>` only at the API boundary. Empty rows are
-// allowed in the UI (so the user can build up new entries) and dropped on
-// submit.
-interface CurrencyRateRow {
-  code: string
-  rate: number | null
-}
-
 const state = reactive<ShopSettingsSchema>({
   name: '',
   description: '',
@@ -71,36 +58,22 @@ const state = reactive<ShopSettingsSchema>({
   shopUrl: ''
 })
 
-const currencyRates = ref<CurrencyRateRow[]>([])
-
-function addRate() {
-  currencyRates.value.push({ code: '', rate: null })
-}
-
-function removeRate(index: number) {
-  currencyRates.value.splice(index, 1)
-}
-
 const loading = ref(false)
 const fetching = ref(true)
 
-function applyData(data: ApiShopSettings) {
+function applyData(data: ShopSettingsSchema) {
   state.name = data.name
   state.description = data.description || ''
   state.ip = data.ip
   state.color = data.color
   state.shopUrl = data.shopUrl || ''
-  currencyRates.value = Object.entries(data.currencyRates || {}).map(([code, rate]) => ({
-    code,
-    rate: Number(rate)
-  }))
 }
 
 // Load settings from API
 async function fetchSettings() {
   fetching.value = true
   try {
-    const data = await $fetch<ApiShopSettings>('/shop-settings', {
+    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
       baseURL: config.public.apiBase as string
     })
     applyData(data)
@@ -119,21 +92,9 @@ async function fetchSettings() {
 onMounted(fetchSettings)
 
 async function onSubmit() {
-  // Build the rates payload from the editable rows. Empty / non-positive
-  // rows are silently dropped — they're treated as "user is still typing"
-  // rather than a validation error. Duplicate codes resolve to last-wins.
-  const ratesPayload: Record<string, number> = {}
-  for (const row of currencyRates.value) {
-    const code = (row.code || '').trim().toUpperCase()
-    const rate = Number(row.rate)
-    if (!code || code === 'RUB') continue
-    if (!Number.isFinite(rate) || rate <= 0) continue
-    ratesPayload[code] = rate
-  }
-
   loading.value = true
   try {
-    const data = await $fetch<ApiShopSettings>('/shop-settings', {
+    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
       baseURL: config.public.apiBase as string,
       method: 'PUT',
       headers: {
@@ -147,8 +108,7 @@ async function onSubmit() {
         // Empty string means "unset" — backend treats it as no override and
         // the shop falls back to the live origin. Skip the field entirely
         // when blank so we don't trip the JSON Schema `format: 'uri'` check.
-        ...(state.shopUrl ? { shopUrl: state.shopUrl } : {}),
-        currencyRates: ratesPayload
+        ...(state.shopUrl ? { shopUrl: state.shopUrl } : {})
       }
     })
     applyData(data)
@@ -296,55 +256,6 @@ async function onSubmit() {
                 :style="{ backgroundColor: tailwindColors[color] }"
                 :title="color.charAt(0).toUpperCase() + color.slice(1)"
                 @click="state.color = color"
-              />
-            </div>
-          </UFormField>
-
-          <USeparator />
-
-          <UFormField
-            label="Курсы валют"
-            description="Сколько рублей в одной единице валюты. Используется для всех расчётов где нужно сравнить или сложить суммы в разных валютах (сортировка клиентов по «Потрачено», статистика и т.д.). RUB — базовая валюта (всегда 1)."
-          >
-            <div class="space-y-2 max-w-lg">
-              <div
-                v-for="(row, idx) in currencyRates"
-                :key="idx"
-                class="flex items-center gap-2"
-              >
-                <UInput
-                  v-model="row.code"
-                  placeholder="USD"
-                  class="w-24"
-                  :ui="{ base: 'uppercase' }"
-                  maxlength="8"
-                />
-                <span class="text-muted text-sm">=</span>
-                <UInput
-                  v-model.number="row.rate"
-                  type="number"
-                  step="0.0001"
-                  min="0"
-                  placeholder="95"
-                  class="flex-1"
-                />
-                <span class="text-muted text-sm">RUB</span>
-                <UButton
-                  icon="i-lucide-trash-2"
-                  variant="ghost"
-                  color="error"
-                  size="sm"
-                  square
-                  @click="removeRate(idx)"
-                />
-              </div>
-              <UButton
-                icon="i-lucide-plus"
-                variant="soft"
-                color="neutral"
-                size="sm"
-                label="Добавить валюту"
-                @click="addRate"
               />
             </div>
           </UFormField>

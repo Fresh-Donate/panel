@@ -16,11 +16,32 @@ interface SettingsData {
   delivery_method: DeliveryMethod
   rcon_config: { host: string, port: number, password: string }
   plugin_config: { token: string }
+  currency_rates: Record<string, number>
 }
 
 const state = reactive({
   demo_payments: false
 })
+
+// Edited as an ordered list because keys can be renamed in place. Converted
+// to/from `Record<string, number>` only at the API boundary. Empty rows are
+// allowed in the UI (so the user can build up new entries) and dropped on
+// submit.
+interface CurrencyRateRow {
+  code: string
+  rate: number | null
+}
+
+const currencyRates = ref<CurrencyRateRow[]>([])
+const ratesLoading = ref(false)
+
+function addRate() {
+  currencyRates.value.push({ code: '', rate: null })
+}
+
+function removeRate(index: number) {
+  currencyRates.value.splice(index, 1)
+}
 
 const deliveryMethod = ref<DeliveryMethod>('rcon')
 const savedDeliveryMethod = ref<DeliveryMethod>('rcon')
@@ -55,6 +76,10 @@ async function fetchSettings() {
     rconState.port = data.rcon_config?.port || 25575
     rconState.password = data.rcon_config?.password || ''
     pluginState.token = data.plugin_config?.token || ''
+    currencyRates.value = Object.entries(data.currency_rates || {}).map(([code, rate]) => ({
+      code,
+      rate: Number(rate)
+    }))
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -142,6 +167,37 @@ async function saveDelivery() {
   }
 }
 
+async function onSubmitRates() {
+  ratesLoading.value = true
+  try {
+    // Drop blank rows, RUB (anchor), and non-positive numbers — backend
+    // would reject them anyway. Codes are uppercased so "usd" works.
+    const payload: Record<string, number> = {}
+    for (const row of currencyRates.value) {
+      const code = row.code.trim().toUpperCase()
+      if (!code || code === 'RUB') continue
+      const rate = Number(row.rate)
+      if (!Number.isFinite(rate) || rate <= 0) continue
+      payload[code] = rate
+    }
+    const data = await $fetch<SettingsData>('/settings', {
+      baseURL: config.public.apiBase as string,
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { currency_rates: payload }
+    })
+    currencyRates.value = Object.entries(data.currency_rates || {}).map(([code, rate]) => ({
+      code,
+      rate: Number(rate)
+    }))
+    toast.add({ title: 'Курсы валют сохранены', icon: 'i-lucide-check-circle', color: 'success' })
+  } catch {
+    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить курсы.', icon: 'i-lucide-alert-circle', color: 'error' })
+  } finally {
+    ratesLoading.value = false
+  }
+}
+
 function regenerateToken() {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let result = ''
@@ -207,6 +263,66 @@ function regenerateToken() {
               />
             </div>
           </UForm>
+        </UPageCard>
+
+        <!-- Currency rates -->
+        <UPageCard
+          title="Курсы валют"
+          description="Сколько рублей в одной единице валюты. Используется для пересчёта статистики и сортировок (например, по сумме покупок). RUB — базовая валюта и всегда равна 1."
+        >
+          <div class="space-y-3">
+            <div class="space-y-2 max-w-lg">
+              <div
+                v-for="(row, idx) in currencyRates"
+                :key="idx"
+                class="flex items-center gap-2"
+              >
+                <UInput
+                  v-model="row.code"
+                  placeholder="USD"
+                  class="w-24"
+                  :maxlength="8"
+                />
+                <span class="text-muted text-sm">=</span>
+                <UInput
+                  v-model.number="row.rate"
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  placeholder="95"
+                  class="flex-1"
+                />
+                <span class="text-muted text-sm">RUB</span>
+                <UButton
+                  icon="i-lucide-trash-2"
+                  variant="ghost"
+                  color="error"
+                  size="sm"
+                  square
+                  @click="removeRate(idx)"
+                />
+              </div>
+              <UButton
+                icon="i-lucide-plus"
+                variant="soft"
+                color="neutral"
+                size="sm"
+                label="Добавить валюту"
+                @click="addRate"
+              />
+            </div>
+
+            <USeparator />
+
+            <div>
+              <UButton
+                label="Сохранить"
+                icon="i-lucide-save"
+                :loading="ratesLoading"
+                @click="onSubmitRates"
+              />
+            </div>
+          </div>
         </UPageCard>
 
         <!-- Delivery -->
