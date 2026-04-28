@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -84,7 +84,7 @@ const countY = (d: DataRecord) => d.count
 
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
-const formatNumber = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format
+const formatNumber = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format
 
 const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
 const currencySymbol = computed(() => currencySymbols[props.currency || 'RUB'] || props.currency || '₽')
