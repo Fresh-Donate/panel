@@ -76,8 +76,11 @@ function normalizeKey(date: Date): string {
   return format(startOfDay(date), 'yyyy-MM-dd')
 }
 
-const x = (_: DataRecord, i: number) => i
-const y = (d: DataRecord) => d.amount
+const spentX = (_: DataRecord, i: number) => i
+const spentY = (d: DataRecord) => d.amount
+
+const countX = (_: DataRecord, i: number) => i
+const countY = (d: DataRecord) => d.count
 
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
@@ -88,7 +91,7 @@ const currencySymbol = computed(() => currencySymbols[props.currency || 'RUB'] |
 
 const formatDateLabel = (date: Date): string => {
   return ({
-    daily: format(date, 'd MMM'),
+    daily: format(date, 'dd.MM.yy'),
     weekly: format(date, 'd MMM'),
     monthly: format(date, 'MMM yyy')
   })[props.period]
@@ -101,7 +104,10 @@ const xTicks = (i: number) => {
   return formatDateLabel(data.value[i].date)
 }
 
-const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(d.amount)}${currencySymbol.value} (${d.count})`
+const template = (d: DataRecord) => `
+<p style="font-size: 0.9rem; font-weight: 400">${formatDateLabel(d.date)}</p>
+<p style="font-size: 1.4rem; font-weight: 700">${formatNumber(d.amount)}${currencySymbol.value}</p>
+Покупок: ${d.count} шт.`
 </script>
 
 <template>
@@ -128,20 +134,32 @@ const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(
       :width="width"
     >
       <VisLine
-        :x="x"
-        :y="y"
+        :x="spentX"
+        :y="spentY"
         color="var(--ui-primary)"
       />
       <VisArea
-        :x="x"
-        :y="y"
+        :x="spentX"
+        :y="spentY"
         color="var(--ui-primary)"
+        :opacity="0.1"
+      />
+
+      <VisLine
+        :x="countX"
+        :y="countY"
+        color="var(--ui-success)"
+      />
+      <VisArea
+        :x="countX"
+        :y="countY"
+        color="var(--ui-success)"
         :opacity="0.1"
       />
 
       <VisAxis
         type="x"
-        :x="x"
+        :x="spentX"
         :tick-format="xTicks"
       />
 
