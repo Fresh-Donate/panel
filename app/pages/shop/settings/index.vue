@@ -41,7 +41,11 @@ const schema = z.object({
   name: z.string().min(1, 'Название магазина обязательно').max(64, 'Максимум 64 символа'),
   description: z.string().max(500, 'Максимум 500 символов').optional(),
   ip: z.string().min(1, 'Минимум 1 символ').max(64, 'Максимум 64 символа').optional(),
-  color: z.string().min(1, 'Выберите цвет')
+  color: z.string().min(1, 'Выберите цвет'),
+  // Optional from the user's POV (fresh installs leave it blank), but if
+  // provided it must be a real URL — backend uses it for canonical / OG /
+  // sitemap, and the panel uses it to ping the shop's `/api/version`.
+  shopUrl: z.union([z.literal(''), z.string().url('Должен быть валидный URL').max(256, 'Максимум 256 символов')]).optional()
 })
 
 type ShopSettingsSchema = z.output<typeof schema>
@@ -50,7 +54,8 @@ const state = reactive<ShopSettingsSchema>({
   name: '',
   description: '',
   ip: 'play.example.com',
-  color: 'sky'
+  color: 'sky',
+  shopUrl: ''
 })
 
 const loading = ref(false)
@@ -67,6 +72,7 @@ async function fetchSettings() {
     state.description = data.description || ''
     state.ip = data.ip
     state.color = data.color
+    state.shopUrl = data.shopUrl || ''
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -94,13 +100,18 @@ async function onSubmit() {
         name: state.name,
         description: state.description,
         ip: state.ip,
-        color: state.color
+        color: state.color,
+        // Empty string means "unset" — backend treats it as no override and
+        // the shop falls back to the live origin. Skip the field entirely
+        // when blank so we don't trip the JSON Schema `format: 'uri'` check.
+        ...(state.shopUrl ? { shopUrl: state.shopUrl } : {})
       }
     })
     state.name = data.name
     state.description = data.description || ''
     state.ip = data.ip
     state.color = data.color
+    state.shopUrl = data.shopUrl || ''
     toast.add({
       title: 'Настройки сохранены',
       description: 'Настройки магазина успешно обновлены.',
@@ -193,6 +204,21 @@ async function onSubmit() {
               v-model="state.ip"
               placeholder="Например: play.example.com"
               icon="i-lucide-link"
+              class="w-full max-w-lg"
+            />
+          </UFormField>
+
+          <USeparator />
+
+          <UFormField
+            label="Адрес магазина"
+            name="shopUrl"
+            description="Публичный URL фронтенда магазина — используется для canonical-ссылок, Open Graph, sitemap.xml и кнопок «Открыть магазин». Без слэша в конце. Если оставить пустым, будет использован адрес запроса."
+          >
+            <UInput
+              v-model="state.shopUrl"
+              placeholder="https://shop.example.com"
+              icon="i-lucide-globe"
               class="w-full max-w-lg"
             />
           </UFormField>

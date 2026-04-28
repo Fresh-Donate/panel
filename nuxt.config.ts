@@ -15,8 +15,10 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:3001',
-      shopBase: 'http://localhost:3002'
+      apiBase: 'http://localhost:3001'
+      // Note: the shop's public URL lives in the database (`shopUrl` on
+      // shop settings, edited from /shop/settings). The panel fetches it at
+      // runtime — no env var needed.
     }
   },
 

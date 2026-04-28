@@ -12,13 +12,29 @@ interface ServiceInfo { name: string, version: string }
 const services = ref<ServiceInfo[]>([])
 
 onMounted(async () => {
+  // Discover the shop's public origin first — it's stored on shop settings
+  // (DB-backed, configured from the admin "general" page) rather than env.
+  // If the backend is unreachable or shopUrl isn't set yet, the Shop ping
+  // is simply skipped.
+  let shopUrl = ''
+  try {
+    const shopSettings = await $fetch<{ shopUrl?: string }>('/shop-settings', {
+      baseURL: config.public.apiBase as string
+    })
+    shopUrl = (shopSettings?.shopUrl || '').replace(/\/+$/, '')
+  } catch {
+    // Backend unreachable; skip Shop endpoint below.
+  }
+
   const results: ServiceInfo[] = []
 
-  const endpoints = [
+  const endpoints: Array<{ url: string, label: string }> = [
     { url: '/api/version', label: 'Panel' },
-    { url: `${config.public.apiBase}`, label: 'Backend' },
-    { url: `${config.public.shopBase}/api/version`, label: 'Shop' }
+    { url: `${config.public.apiBase}`, label: 'Backend' }
   ]
+  if (shopUrl) {
+    endpoints.push({ url: `${shopUrl}/api/version`, label: 'Shop' })
+  }
 
   await Promise.allSettled(
     endpoints.map(async (ep) => {
