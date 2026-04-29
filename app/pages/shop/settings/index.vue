@@ -37,6 +37,16 @@ const colorItems = colorNames.map(color => ({
   value: color
 }))
 
+type OwnerType = '' | 'individual' | 'self_employed' | 'sole_proprietor' | 'legal_entity'
+
+const ownerTypeItems: { label: string, value: OwnerType }[] = [
+  { label: 'Не указывать', value: '' },
+  { label: 'Физическое лицо', value: 'individual' },
+  { label: 'Самозанятый (НПД)', value: 'self_employed' },
+  { label: 'Индивидуальный предприниматель', value: 'sole_proprietor' },
+  { label: 'Юридическое лицо', value: 'legal_entity' }
+]
+
 const schema = z.object({
   name: z.string().min(1, 'Название магазина обязательно').max(64, 'Максимум 64 символа'),
   description: z.string().max(500, 'Максимум 500 символов').optional(),
@@ -45,7 +55,21 @@ const schema = z.object({
   // Optional from the user's POV (fresh installs leave it blank), but if
   // provided it must be a real URL — backend uses it for canonical / OG /
   // sitemap, and the panel uses it to ping the shop's `/api/version`.
-  shopUrl: z.union([z.literal(''), z.string().url('Должен быть валидный URL').max(256, 'Максимум 256 символов')]).optional()
+  shopUrl: z.union([z.literal(''), z.string().url('Должен быть валидный URL').max(256, 'Максимум 256 символов')]).optional(),
+  // All "owner" fields are optional. They populate the public legal pages
+  // (оферта / соглашение / приватность); blank means "не указано".
+  ownerName: z.string().max(256, 'Максимум 256 символов').optional(),
+  ownerType: z.enum(['', 'individual', 'self_employed', 'sole_proprietor', 'legal_entity']).optional(),
+  // INN is 10 digits (юрлица) or 12 digits (ИП / самозанятые / физлица).
+  // Empty string is allowed — the field is opt-in.
+  ownerInn: z.union([
+    z.literal(''),
+    z.string().regex(/^\d{10}$|^\d{12}$/, 'ИНН должен содержать 10 или 12 цифр')
+  ]).optional(),
+  contactEmail: z.union([
+    z.literal(''),
+    z.string().email('Должен быть валидный email').max(256, 'Максимум 256 символов')
+  ]).optional()
 })
 
 type ShopSettingsSchema = z.output<typeof schema>
@@ -55,7 +79,11 @@ const state = reactive<ShopSettingsSchema>({
   description: '',
   ip: 'play.example.com',
   color: 'sky',
-  shopUrl: ''
+  shopUrl: '',
+  ownerName: '',
+  ownerType: '',
+  ownerInn: '',
+  contactEmail: ''
 })
 
 const loading = ref(false)
@@ -67,6 +95,10 @@ function applyData(data: ShopSettingsSchema) {
   state.ip = data.ip
   state.color = data.color
   state.shopUrl = data.shopUrl || ''
+  state.ownerName = data.ownerName || ''
+  state.ownerType = data.ownerType || ''
+  state.ownerInn = data.ownerInn || ''
+  state.contactEmail = data.contactEmail || ''
 }
 
 // Load settings from API
@@ -108,7 +140,11 @@ async function onSubmit() {
         // Empty string means "unset" — backend treats it as no override and
         // the shop falls back to the live origin. Skip the field entirely
         // when blank so we don't trip the JSON Schema `format: 'uri'` check.
-        ...(state.shopUrl ? { shopUrl: state.shopUrl } : {})
+        ...(state.shopUrl ? { shopUrl: state.shopUrl } : {}),
+        ownerName: state.ownerName ?? '',
+        ownerType: state.ownerType ?? '',
+        ownerInn: state.ownerInn ?? '',
+        contactEmail: state.contactEmail ?? ''
       }
     })
     applyData(data)
@@ -258,6 +294,71 @@ async function onSubmit() {
                 @click="state.color = color"
               />
             </div>
+          </UFormField>
+
+          <USeparator />
+
+          <div class="space-y-1">
+            <p class="font-semibold">
+              Юридическая информация
+            </p>
+            <p class="text-sm text-muted">
+              Используется в публичных документах магазина (оферта, соглашение, политика). Все поля опциональны — если оставить пустыми, в документах будет «не указано».
+            </p>
+          </div>
+
+          <UFormField
+            label="Владелец магазина"
+            name="ownerName"
+            description="ФИО (для физлица / самозанятого / ИП) или полное наименование организации."
+          >
+            <UInput
+              v-model="state.ownerName"
+              placeholder="Иванов Иван Иванович"
+              icon="i-lucide-user"
+              class="w-full max-w-lg"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Тип владельца"
+            name="ownerType"
+            description="Влияет на формулировки в публичной оферте и политике конфиденциальности."
+          >
+            <USelectMenu
+              v-model="state.ownerType"
+              :items="ownerTypeItems"
+              value-key="value"
+              class="w-full max-w-md"
+            />
+          </UFormField>
+
+          <UFormField
+            label="ИНН"
+            name="ownerInn"
+            description="10 цифр для юрлиц или 12 цифр для физлиц / самозанятых / ИП. Можно не указывать."
+          >
+            <UInput
+              v-model="state.ownerInn"
+              placeholder="123456789012"
+              icon="i-lucide-hash"
+              class="w-full max-w-xs"
+              :maxlength="12"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Контактный email"
+            name="contactEmail"
+            description="На него игроки будут писать запросы по 152-ФЗ (доступ / удаление персональных данных) и претензии по покупкам."
+          >
+            <UInput
+              v-model="state.contactEmail"
+              type="email"
+              placeholder="contact@example.com"
+              icon="i-lucide-mail"
+              class="w-full max-w-lg"
+            />
           </UFormField>
 
           <USeparator />
