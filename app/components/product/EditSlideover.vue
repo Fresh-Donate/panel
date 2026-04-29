@@ -26,7 +26,8 @@ const schema = z.object({
   description: z.string().max(1000, 'Макс. 1000 символов').optional(),
   type: z.string().min(1, 'Выберите тип'),
   commands: z.string().optional(),
-  allowCustomCount: z.boolean()
+  allowCustomCount: z.boolean(),
+  imageUrl: z.string().max(512, 'Слишком длинная ссылка').optional()
 })
 
 type FormState = z.input<typeof schema>
@@ -39,7 +40,8 @@ const state = reactive<FormState>({
   description: '',
   type: 'item',
   commands: '',
-  allowCustomCount: false
+  allowCustomCount: false,
+  imageUrl: ''
 })
 
 watch(() => props.product, (p) => {
@@ -52,6 +54,7 @@ watch(() => props.product, (p) => {
     state.type = p.type
     state.commands = p.commands?.join('\n') || ''
     state.allowCustomCount = p.allowCustomCount || false
+    state.imageUrl = p.imageUrl || ''
   }
 }, { immediate: true })
 
@@ -98,7 +101,8 @@ async function onSubmit() {
         description: state.description || '',
         type: state.type,
         commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
-        allowCustomCount: state.allowCustomCount
+        allowCustomCount: state.allowCustomCount,
+        imageUrl: state.imageUrl || ''
       }
     })
 
@@ -230,6 +234,14 @@ async function onSubmit() {
             autoresize
             class="w-full"
           />
+        </UFormField>
+
+        <UFormField
+          label="Изображение"
+          name="imageUrl"
+          description="Загрузите файл (до 10 МБ) или вставьте ссылку. Картинка автоматически сжимается."
+        >
+          <ProductImageInput v-model:url="state.imageUrl" />
         </UFormField>
 
         <USeparator label="Команды" />
