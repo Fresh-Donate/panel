@@ -68,7 +68,8 @@ const statusLabels: Record<string, { label: string, color: string }> = {
   paid: { label: 'Оплачен', color: 'info' },
   delivered: { label: 'Выполнен', color: 'success' },
   failed: { label: 'Ошибка', color: 'error' },
-  refunded: { label: 'Возврат', color: 'neutral' }
+  refunded: { label: 'Возврат', color: 'neutral' },
+  expired: { label: 'Истёк', color: 'neutral' }
 }
 
 const statuses = [
@@ -77,7 +78,8 @@ const statuses = [
   { label: 'Оплачен', value: 'paid' },
   { label: 'Выполнен', value: 'delivered' },
   { label: 'Ошибка', value: 'failed' },
-  { label: 'Возврат', value: 'refunded' }
+  { label: 'Возврат', value: 'refunded' },
+  { label: 'Истёк', value: 'expired' }
 ]
 
 async function fetchPayments() {
