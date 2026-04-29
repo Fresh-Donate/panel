@@ -288,7 +288,6 @@ function getActions(product: Product) {
     </template>
   </UDashboardPanel>
 
-  <!-- Create Product Slideover -->
   <ProductCreateSlideover
     v-model:open="showCreate"
     :product-types="productTypes"
@@ -296,7 +295,6 @@ function getActions(product: Product) {
     @created="(p: Product) => { products.unshift(p); showCreate = false }"
   />
 
-  <!-- Edit Product Slideover -->
   <ProductEditSlideover
     v-if="editingProduct"
     v-model:open="showEdit"

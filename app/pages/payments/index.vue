@@ -39,6 +39,7 @@ interface PaymentItem {
   }
   createdAt: string
   updatedAt: string
+  userSelectedCount: number
 }
 
 const config = useRuntimeConfig()
@@ -392,7 +393,7 @@ const columns = [
               Количество
             </p>
             <p class="text-sm">
-              {{ selected.quantity }}
+              {{ selected.quantity * selected.userSelectedCount }}
             </p>
           </div>
           <div>

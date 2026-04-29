@@ -12,6 +12,7 @@ export interface Product {
   type: ProductType
   commands: string[]
   imageUrl?: string
+  allowCustomCount: boolean
   createdAt: string
   updatedAt: string
 }

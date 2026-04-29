@@ -24,7 +24,8 @@ const schema = z.object({
   quantity: z.number().int().min(0, 'Минимум 0'),
   description: z.string().max(1000, 'Макс. 1000 символов').optional(),
   type: z.string().min(1, 'Выберите тип'),
-  commands: z.string().optional()
+  commands: z.string().optional(),
+  allowCustomCount: z.boolean()
 })
 
 type FormState = z.input<typeof schema>
@@ -36,7 +37,8 @@ const initial: FormState = {
   quantity: 1,
   description: '',
   type: 'item',
-  commands: ''
+  commands: '',
+  allowCustomCount: false
 }
 
 const state = reactive<FormState>({ ...initial })
@@ -91,7 +93,8 @@ async function onSubmit() {
         quantity: state.quantity,
         description: state.description || '',
         type: state.type,
-        commands: state.commands ? state.commands.split('\n').filter(Boolean) : []
+        commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
+        allowCustomCount: state.allowCustomCount
       }
     })
 
@@ -195,6 +198,18 @@ async function onSubmit() {
             type="number"
             :min="state.type === 'privilege' ? 0 : 1"
             placeholder="1"
+            class="w-full max-w-xs"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Пользовательское количество"
+          name="description"
+          description="Разрешить пользователю ввод количества желаемого товара."
+          required
+        >
+          <USwitch
+            v-model="state.allowCustomCount"
             class="w-full max-w-xs"
           />
         </UFormField>
