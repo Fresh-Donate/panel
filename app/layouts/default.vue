@@ -65,6 +65,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Акции',
+  icon: 'i-lucide-tag',
+  to: '/promotions',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Платежи',
   icon: 'i-lucide-receipt',
   to: '/payments',

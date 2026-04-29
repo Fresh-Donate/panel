@@ -2,6 +2,12 @@ export type ProductType = 'item' | 'privilege' | 'currency' | 'other'
 
 export type Currency = 'RUB' | 'USD' | 'EUR'
 
+export interface ProductPromotion {
+  id: string
+  name: string
+  discountPercent: number
+}
+
 export interface Product {
   id: string
   name: string
@@ -13,6 +19,20 @@ export interface Product {
   commands: string[]
   imageUrl?: string
   allowCustomCount: boolean
+  activePromotions?: ProductPromotion[]
+  discountPercent?: number
+  discountedPrice?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Promotion {
+  id: string
+  name: string
+  discountPercent: number
+  startsAt: string
+  endsAt: string
+  productIds: string[]
   createdAt: string
   updatedAt: string
 }
