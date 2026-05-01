@@ -72,6 +72,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Группы',
+  icon: 'i-lucide-layers',
+  to: '/groups',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Платежи',
   icon: 'i-lucide-receipt',
   to: '/payments',

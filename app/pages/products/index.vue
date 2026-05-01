@@ -9,6 +9,7 @@ const token = useCookie('auth_token')
 const showCreate = ref(false)
 const showEdit = ref(false)
 const editingProduct = ref<Product | null>(null)
+const showCreateGroup = ref(false)
 
 function authHeaders() {
   return { Authorization: `Bearer ${token.value}` }
@@ -81,6 +82,7 @@ const columns: TableColumn<Product>[] = [
   { accessorKey: 'type', header: 'Тип' },
   { accessorKey: 'price', header: 'Цена' },
   { accessorKey: 'quantity', header: 'Кол-во' },
+  { accessorKey: 'groups', header: 'Группы' },
   { accessorKey: 'actions', header: '' }
 ]
 
@@ -154,6 +156,13 @@ function getActions(product: Product) {
         </template>
 
         <template #right>
+          <UButton
+            label="Создать группу"
+            icon="i-lucide-layers"
+            color="neutral"
+            variant="soft"
+            @click="showCreateGroup = true"
+          />
           <UButton
             label="Добавить товар"
             icon="i-lucide-plus"
@@ -251,6 +260,29 @@ function getActions(product: Product) {
             </span>
           </template>
 
+          <template #groups-cell="{ row }">
+            <div
+              v-if="!row.original.groups || row.original.groups.length === 0"
+              class="text-xs text-muted"
+            >
+              Нет
+            </div>
+            <div
+              v-else
+              class="flex flex-wrap gap-1 max-w-xs"
+            >
+              <UBadge
+                v-for="g in row.original.groups"
+                :key="g.id"
+                :label="g.name"
+                :icon="g.upgradeMode ? 'i-lucide-arrow-up-right' : undefined"
+                :color="g.upgradeMode ? 'primary' : 'neutral'"
+                variant="subtle"
+                size="sm"
+              />
+            </div>
+          </template>
+
           <template #actions-cell="{ row }">
             <UDropdownMenu :items="getActions(row.original)">
               <UButton
@@ -302,5 +334,11 @@ function getActions(product: Product) {
     :product-types="productTypes"
     :currencies="currencies"
     @updated="onUpdated"
+  />
+
+  <GroupCreateSlideover
+    v-model:open="showCreateGroup"
+    :products="products"
+    @created="() => { showCreateGroup = false; fetchProducts() }"
   />
 </template>

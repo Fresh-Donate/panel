@@ -58,6 +58,13 @@ watch(() => props.product, (p) => {
   }
 }, { immediate: true })
 
+// Privilege products are rank-style — quantity is always 1, the field is
+// hidden in the form, and we still send `1` to the backend so existing
+// schema validation and downstream logic don't break.
+watch(() => state.type, (t) => {
+  if (t === 'privilege') state.quantity = 1
+})
+
 const commandHints: Record<ProductType, string> = {
   item: 'Используйте {player} для ника игрока и {amount} для количества.\nПример: give {player} diamond {amount}',
   privilege: 'Используйте {player} для ника игрока.\nПример: lp user {player} parent set vip',
@@ -97,11 +104,13 @@ async function onSubmit() {
         name: state.name,
         price: state.price,
         currency: state.currency,
-        quantity: state.quantity,
+        // Privilege products always ship with quantity=1 — the panel hides
+        // the input but the backend schema still requires a number.
+        quantity: state.type === 'privilege' ? 1 : state.quantity,
         description: state.description || '',
         type: state.type,
         commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
-        allowCustomCount: state.allowCustomCount,
+        allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
         imageUrl: state.imageUrl || ''
       }
     })
@@ -196,6 +205,7 @@ async function onSubmit() {
         </div>
 
         <UFormField
+          v-if="state.type !== 'privilege'"
           :label="qLabel.label"
           :description="qLabel.description"
           name="quantity"
@@ -204,13 +214,14 @@ async function onSubmit() {
           <UInput
             v-model.number="state.quantity"
             type="number"
-            :min="state.type === 'privilege' ? 0 : 1"
+            :min="1"
             placeholder="1"
             class="w-full max-w-xs"
           />
         </UFormField>
 
         <UFormField
+          v-if="state.type !== 'privilege'"
           label="Пользовательское количество"
           name="description"
           description="Разрешить пользователю ввод количества желаемого товара."

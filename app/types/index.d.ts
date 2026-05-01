@@ -8,6 +8,12 @@ export interface ProductPromotion {
   discountPercent: number
 }
 
+export interface ProductGroup {
+  id: string
+  name: string
+  upgradeMode: boolean
+}
+
 export interface Product {
   id: string
   name: string
@@ -22,6 +28,16 @@ export interface Product {
   activePromotions?: ProductPromotion[]
   discountPercent?: number
   discountedPrice?: number
+  groups?: ProductGroup[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Group {
+  id: string
+  name: string
+  upgradeMode: boolean
+  productIds: string[]
   createdAt: string
   updatedAt: string
 }
