@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { PaymentMethod, CommissionRule, CommissionMode } from '~/types'
+import type { CommissionRule, CommissionMode } from '~/types'
 
 const props = defineProps<{
-  methods: PaymentMethod[]
+  commissionPercent: number
+  currency?: string
 }>()
 
 const rule = defineModel<CommissionRule>('rule', { required: true })
@@ -25,25 +26,33 @@ const commissionModes: { value: CommissionMode, label: string, description: stri
   }
 ]
 
-const enabledMethods = computed(() => props.methods.filter(m => m.enabled))
+const currencySymbol = computed(() => {
+  switch (props.currency) {
+    case 'RUB': return '₽'
+    case 'USD': return '$'
+    case 'EUR': return '€'
+    default: return '₽'
+  }
+})
 
-function examplePrice(method: PaymentMethod): string {
+const example = computed(() => {
   const price = 100
-  const comm = method.commission
+  const comm = props.commissionPercent
+  const s = currencySymbol.value
 
   if (rule.value.mode === 'seller') {
     const receive = (price - price * comm / 100).toFixed(2)
-    return `Покупатель платит ${price}₽ → вы получаете ${receive}₽`
-  } else if (rule.value.mode === 'buyer') {
-    const total = (price + price * comm / 100).toFixed(2)
-    return `Цена ${price}₽ → покупатель платит ${total}₽ → вы получаете ${price}₽`
-  } else {
-    const halfComm = comm / 2
-    const buyerPays = (price + price * halfComm / 100).toFixed(2)
-    const sellerReceives = (price - price * halfComm / 100).toFixed(2)
-    return `Покупатель платит ${buyerPays}₽ → вы получаете ${sellerReceives}₽`
+    return `Покупатель платит ${price}${s} → вы получаете ${receive}${s}`
   }
-}
+  if (rule.value.mode === 'buyer') {
+    const total = (price + price * comm / 100).toFixed(2)
+    return `Цена ${price}${s} → покупатель платит ${total}${s} → вы получаете ${price}${s}`
+  }
+  const halfComm = comm / 2
+  const buyerPays = (price + price * halfComm / 100).toFixed(2)
+  const sellerReceives = (price - price * halfComm / 100).toFixed(2)
+  return `Покупатель платит ${buyerPays}${s} → вы получаете ${sellerReceives}${s}`
+})
 </script>
 
 <template>
@@ -85,23 +94,13 @@ function examplePrice(method: PaymentMethod): string {
     </div>
 
     <!-- Commission example -->
-    <div
-      v-if="enabledMethods.length > 0"
-      class="mt-4 p-4 rounded-lg bg-muted/5 border border-default"
-    >
+    <div class="mt-4 p-4 rounded-lg bg-muted/5 border border-default">
       <p class="text-xs font-medium text-muted mb-2">
-        Пример расчёта (товар за 100₽)
+        Пример расчёта (товар за 100{{ currencySymbol }}, комиссия {{ commissionPercent }}%)
       </p>
-      <div class="space-y-1.5">
-        <div
-          v-for="method in enabledMethods"
-          :key="method.id"
-          class="flex items-start gap-2 text-xs"
-        >
-          <span class="font-medium shrink-0 min-w-24">{{ method.name }}:</span>
-          <span class="text-muted">{{ examplePrice(method) }}</span>
-        </div>
-      </div>
+      <p class="text-xs text-muted">
+        {{ example }}
+      </p>
     </div>
   </UPageCard>
 </template>

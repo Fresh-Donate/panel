@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, parseISO, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -38,14 +38,13 @@ watch([() => props.period, () => props.range, () => props.currency], async () =>
       params
     })
 
-    // Build a map from API data
     const dataMap = new Map<string, { amount: number, count: number }>()
     for (const item of chartData) {
       const key = normalizeKey(new Date(item.date))
       dataMap.set(key, { amount: item.amount, count: item.count })
     }
 
-    // Generate all dates in range and fill gaps with 0
+    // Fill in dates the API didn't return so the chart has even spacing.
     const intervals = ({
       daily: eachDayOfInterval,
       weekly: eachWeekOfInterval,
@@ -76,19 +75,22 @@ function normalizeKey(date: Date): string {
   return format(startOfDay(date), 'yyyy-MM-dd')
 }
 
-const x = (_: DataRecord, i: number) => i
-const y = (d: DataRecord) => d.amount
+const spentX = (_: DataRecord, i: number) => i
+const spentY = (d: DataRecord) => d.amount
+
+const countX = (_: DataRecord, i: number) => i
+const countY = (d: DataRecord) => d.count
 
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
-const formatNumber = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format
+const formatNumber = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format
 
 const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
 const currencySymbol = computed(() => currencySymbols[props.currency || 'RUB'] || props.currency || '₽')
 
 const formatDateLabel = (date: Date): string => {
   return ({
-    daily: format(date, 'd MMM'),
+    daily: format(date, 'dd.MM.yy'),
     weekly: format(date, 'd MMM'),
     monthly: format(date, 'MMM yyy')
   })[props.period]
@@ -101,7 +103,10 @@ const xTicks = (i: number) => {
   return formatDateLabel(data.value[i].date)
 }
 
-const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(d.amount)}${currencySymbol.value} (${d.count})`
+const template = (d: DataRecord) => `
+<p style="font-size: 0.9rem; font-weight: 400">${formatDateLabel(d.date)}</p>
+<p style="font-size: 1.4rem; font-weight: 700">${formatNumber(d.amount)}${currencySymbol.value}</p>
+Покупок: ${d.count} шт.`
 </script>
 
 <template>
@@ -128,20 +133,32 @@ const template = (d: DataRecord) => `${formatDateLabel(d.date)}: ${formatNumber(
       :width="width"
     >
       <VisLine
-        :x="x"
-        :y="y"
+        :x="spentX"
+        :y="spentY"
         color="var(--ui-primary)"
       />
       <VisArea
-        :x="x"
-        :y="y"
+        :x="spentX"
+        :y="spentY"
         color="var(--ui-primary)"
+        :opacity="0.1"
+      />
+
+      <VisLine
+        :x="countX"
+        :y="countY"
+        color="var(--ui-success)"
+      />
+      <VisArea
+        :x="countX"
+        :y="countY"
+        color="var(--ui-success)"
         :opacity="0.1"
       />
 
       <VisAxis
         type="x"
-        :x="x"
+        :x="spentX"
         :tick-format="xTicks"
       />
 

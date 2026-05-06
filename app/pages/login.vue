@@ -9,16 +9,18 @@ const toast = useToast()
 
 const fields: AuthFormField[] = [{
   name: 'login',
-  type: 'name',
+  type: 'text',
   label: 'Логин',
   placeholder: 'Введите логин',
-  required: true
+  required: true,
+  autocomplete: 'username'
 }, {
   name: 'password',
   label: 'Пароль',
   type: 'password',
   placeholder: 'Введите пароль',
-  required: true
+  required: true,
+  autocomplete: 'current-password'
 }]
 
 const schema = z.object({
@@ -28,10 +30,30 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>
 
+// UAuthForm submits via JS (no real navigation), so Chromium's "Save
+// password?" prompt won't fire on its own — nudge it via the Credential
+// Management API. Firefox / Safari fall back to autocomplete heuristics.
+async function rememberCredentials(loginValue: string, password: string) {
+  if (typeof window === 'undefined') return
+  const PasswordCredentialCtor = (window as any).PasswordCredential
+  if (!PasswordCredentialCtor || !navigator.credentials?.store) return
+  try {
+    const cred = new PasswordCredentialCtor({
+      id: loginValue,
+      password,
+      name: loginValue
+    })
+    await navigator.credentials.store(cred)
+  } catch {
+    // Browser may decline (private mode, user rejected) — non-fatal.
+  }
+}
+
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   const data = payload.data
   try {
     await auth.login(data.login, data.password)
+    await rememberCredentials(data.login, data.password)
     navigateTo('/')
   } catch (e: any) {
     console.error(e)

@@ -1,5 +1,6 @@
 {
   "name": "fresh-donate-panel",
+  "version": "1.1.0",
   "type": "module",
   "private": true,
   "scripts": {

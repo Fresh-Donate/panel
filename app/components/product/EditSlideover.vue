@@ -25,7 +25,9 @@ const schema = z.object({
   quantity: z.number().int().min(0, 'Минимум 0'),
   description: z.string().max(1000, 'Макс. 1000 символов').optional(),
   type: z.string().min(1, 'Выберите тип'),
-  commands: z.string().optional()
+  commands: z.string().optional(),
+  allowCustomCount: z.boolean(),
+  imageUrl: z.string().max(512, 'Слишком длинная ссылка').optional()
 })
 
 type FormState = z.input<typeof schema>
@@ -37,7 +39,9 @@ const state = reactive<FormState>({
   quantity: 1,
   description: '',
   type: 'item',
-  commands: ''
+  commands: '',
+  allowCustomCount: false,
+  imageUrl: ''
 })
 
 watch(() => props.product, (p) => {
@@ -49,8 +53,17 @@ watch(() => props.product, (p) => {
     state.description = p.description || ''
     state.type = p.type
     state.commands = p.commands?.join('\n') || ''
+    state.allowCustomCount = p.allowCustomCount || false
+    state.imageUrl = p.imageUrl || ''
   }
 }, { immediate: true })
+
+// Privilege = rank-style: count is always 1, allowCustomCount is forced
+// off, the form hides both fields, and the backend still receives 1 so
+// schema validation passes.
+watch(() => state.type, (t) => {
+  if (t === 'privilege') state.quantity = 1
+})
 
 const commandHints: Record<ProductType, string> = {
   item: 'Используйте {player} для ника игрока и {amount} для количества.\nПример: give {player} diamond {amount}',
@@ -91,10 +104,12 @@ async function onSubmit() {
         name: state.name,
         price: state.price,
         currency: state.currency,
-        quantity: state.quantity,
+        quantity: state.type === 'privilege' ? 1 : state.quantity,
         description: state.description || '',
         type: state.type,
-        commands: state.commands ? state.commands.split('\n').filter(Boolean) : []
+        commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
+        allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
+        imageUrl: state.imageUrl || ''
       }
     })
 
@@ -188,6 +203,7 @@ async function onSubmit() {
         </div>
 
         <UFormField
+          v-if="state.type !== 'privilege'"
           :label="qLabel.label"
           :description="qLabel.description"
           name="quantity"
@@ -196,8 +212,21 @@ async function onSubmit() {
           <UInput
             v-model.number="state.quantity"
             type="number"
-            :min="state.type === 'privilege' ? 0 : 1"
+            :min="1"
             placeholder="1"
+            class="w-full max-w-xs"
+          />
+        </UFormField>
+
+        <UFormField
+          v-if="state.type !== 'privilege'"
+          label="Пользовательское количество"
+          name="description"
+          description="Разрешить пользователю ввод количества желаемого товара."
+          required
+        >
+          <USwitch
+            v-model="state.allowCustomCount"
             class="w-full max-w-xs"
           />
         </UFormField>
@@ -214,6 +243,14 @@ async function onSubmit() {
             autoresize
             class="w-full"
           />
+        </UFormField>
+
+        <UFormField
+          label="Изображение"
+          name="imageUrl"
+          description="Загрузите файл (до 10 МБ) или вставьте ссылку. Картинка автоматически сжимается."
+        >
+          <ProductImageInput v-model:url="state.imageUrl" />
         </UFormField>
 
         <USeparator label="Команды" />

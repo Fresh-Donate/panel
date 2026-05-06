@@ -39,6 +39,7 @@ interface PaymentItem {
   }
   createdAt: string
   updatedAt: string
+  userSelectedCount: number
 }
 
 const config = useRuntimeConfig()
@@ -67,7 +68,8 @@ const statusLabels: Record<string, { label: string, color: string }> = {
   paid: { label: 'Оплачен', color: 'info' },
   delivered: { label: 'Выполнен', color: 'success' },
   failed: { label: 'Ошибка', color: 'error' },
-  refunded: { label: 'Возврат', color: 'neutral' }
+  refunded: { label: 'Возврат', color: 'neutral' },
+  expired: { label: 'Истёк', color: 'neutral' }
 }
 
 const statuses = [
@@ -76,7 +78,8 @@ const statuses = [
   { label: 'Оплачен', value: 'paid' },
   { label: 'Выполнен', value: 'delivered' },
   { label: 'Ошибка', value: 'failed' },
-  { label: 'Возврат', value: 'refunded' }
+  { label: 'Возврат', value: 'refunded' },
+  { label: 'Истёк', value: 'expired' }
 ]
 
 async function fetchPayments() {
@@ -392,7 +395,7 @@ const columns = [
               Количество
             </p>
             <p class="text-sm">
-              {{ selected.quantity }}
+              {{ selected.quantity * selected.userSelectedCount }}
             </p>
           </div>
           <div>

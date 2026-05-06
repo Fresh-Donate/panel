@@ -9,12 +9,12 @@ const token = useCookie('auth_token')
 const showCreate = ref(false)
 const showEdit = ref(false)
 const editingProduct = ref<Product | null>(null)
+const showCreateGroup = ref(false)
 
 function authHeaders() {
   return { Authorization: `Bearer ${token.value}` }
 }
 
-// Product type config
 const productTypes: { value: ProductType, label: string, icon: string }[] = [
   { value: 'item', label: 'Предмет', icon: 'i-lucide-box' },
   { value: 'privilege', label: 'Привилегия', icon: 'i-lucide-crown' },
@@ -41,7 +41,6 @@ function getCurrencySymbol(currency: Currency) {
   return map[currency] ?? currency
 }
 
-// Fetch products from API
 const products = ref<Product[]>([])
 const loading = ref(true)
 
@@ -60,7 +59,6 @@ async function fetchProducts() {
 
 onMounted(fetchProducts)
 
-// Search / filter
 const search = ref('')
 const filterType = ref<ProductType | 'all'>('all')
 
@@ -75,16 +73,15 @@ const filteredProducts = computed(() => {
   })
 })
 
-// Table columns
 const columns: TableColumn<Product>[] = [
   { accessorKey: 'name', header: 'Название' },
   { accessorKey: 'type', header: 'Тип' },
   { accessorKey: 'price', header: 'Цена' },
   { accessorKey: 'quantity', header: 'Кол-во' },
+  { accessorKey: 'groups', header: 'Группы' },
   { accessorKey: 'actions', header: '' }
 ]
 
-// Delete
 async function deleteProduct(id: string) {
   try {
     await $fetch(`/products/${id}`, {
@@ -99,7 +96,6 @@ async function deleteProduct(id: string) {
   }
 }
 
-// Duplicate
 async function duplicateProduct(id: string) {
   try {
     const duplicated = await $fetch<Product>(`/products/${id}/duplicate`, {
@@ -114,7 +110,6 @@ async function duplicateProduct(id: string) {
   }
 }
 
-// Edit
 function openEdit(product: Product) {
   editingProduct.value = { ...product }
   showEdit.value = true
@@ -126,7 +121,6 @@ function onUpdated(updated: Product) {
   showEdit.value = false
 }
 
-// Dropdown actions
 function getActions(product: Product) {
   return [[{
     label: 'Редактировать',
@@ -155,6 +149,13 @@ function getActions(product: Product) {
 
         <template #right>
           <UButton
+            label="Создать группу"
+            icon="i-lucide-layers"
+            color="neutral"
+            variant="soft"
+            @click="showCreateGroup = true"
+          />
+          <UButton
             label="Добавить товар"
             icon="i-lucide-plus"
             @click="showCreate = true"
@@ -164,7 +165,6 @@ function getActions(product: Product) {
     </template>
 
     <template #body>
-      <!-- Loading -->
       <div
         v-if="loading"
         class="flex items-center justify-center py-16"
@@ -176,7 +176,6 @@ function getActions(product: Product) {
       </div>
 
       <template v-else>
-        <!-- Toolbar -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
           <UInput
             v-model="search"
@@ -206,7 +205,6 @@ function getActions(product: Product) {
           </div>
         </div>
 
-        <!-- Table -->
         <UTable
           v-if="filteredProducts.length > 0"
           :data="filteredProducts"
@@ -251,6 +249,29 @@ function getActions(product: Product) {
             </span>
           </template>
 
+          <template #groups-cell="{ row }">
+            <div
+              v-if="!row.original.groups || row.original.groups.length === 0"
+              class="text-xs text-muted"
+            >
+              Нет
+            </div>
+            <div
+              v-else
+              class="flex flex-wrap gap-1 max-w-xs"
+            >
+              <UBadge
+                v-for="g in row.original.groups"
+                :key="g.id"
+                :label="g.name"
+                :icon="g.upgradeMode ? 'i-lucide-arrow-up-right' : undefined"
+                :color="g.upgradeMode ? 'primary' : 'neutral'"
+                variant="subtle"
+                size="sm"
+              />
+            </div>
+          </template>
+
           <template #actions-cell="{ row }">
             <UDropdownMenu :items="getActions(row.original)">
               <UButton
@@ -264,7 +285,6 @@ function getActions(product: Product) {
           </template>
         </UTable>
 
-        <!-- Empty state -->
         <div
           v-if="filteredProducts.length === 0"
           class="text-center py-16"
@@ -288,7 +308,6 @@ function getActions(product: Product) {
     </template>
   </UDashboardPanel>
 
-  <!-- Create Product Slideover -->
   <ProductCreateSlideover
     v-model:open="showCreate"
     :product-types="productTypes"
@@ -296,7 +315,6 @@ function getActions(product: Product) {
     @created="(p: Product) => { products.unshift(p); showCreate = false }"
   />
 
-  <!-- Edit Product Slideover -->
   <ProductEditSlideover
     v-if="editingProduct"
     v-model:open="showEdit"
@@ -304,5 +322,11 @@ function getActions(product: Product) {
     :product-types="productTypes"
     :currencies="currencies"
     @updated="onUpdated"
+  />
+
+  <GroupCreateSlideover
+    v-model:open="showCreateGroup"
+    :products="products"
+    @created="() => { showCreateGroup = false; fetchProducts() }"
   />
 </template>

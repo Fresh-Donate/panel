@@ -6,28 +6,38 @@ const config = useRuntimeConfig()
 
 const open = ref(false)
 
-// Build info
 interface ServiceInfo { name: string, version: string }
 
 const services = ref<ServiceInfo[]>([])
 
 onMounted(async () => {
+  // Shop origin lives on shop-settings (DB), not env — discover it first
+  // so we can ping the shop's /api/version. Skipped if unreachable or
+  // shopUrl is blank on a fresh install.
+  let shopUrl = ''
+  try {
+    const shopSettings = await $fetch<{ shopUrl?: string }>('/shop-settings', {
+      baseURL: config.public.apiBase as string
+    })
+    shopUrl = (shopSettings?.shopUrl || '').replace(/\/+$/, '')
+  } catch { /* backend unreachable */ }
+
   const results: ServiceInfo[] = []
 
-  const endpoints = [
+  const endpoints: Array<{ url: string, label: string }> = [
     { url: '/api/version', label: 'Panel' },
-    { url: `${config.public.apiBase}`, label: 'Backend' },
-    { url: `${config.public.shopBase}/api/version`, label: 'Shop' }
+    { url: `${config.public.apiBase}`, label: 'Backend' }
   ]
+  if (shopUrl) {
+    endpoints.push({ url: `${shopUrl}/api/version`, label: 'Shop' })
+  }
 
   await Promise.allSettled(
     endpoints.map(async (ep) => {
       try {
         const data = await $fetch<{ version: string }>(ep.url)
         results.push({ name: ep.label, version: data.version })
-      } catch {
-        // skip unreachable services
-      }
+      } catch { /* unreachable */ }
     })
   )
 
@@ -45,6 +55,20 @@ const links = [[{
   label: 'Товары',
   icon: 'i-lucide-package',
   to: '/products',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
+  label: 'Акции',
+  icon: 'i-lucide-tag',
+  to: '/promotions',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
+  label: 'Группы',
+  icon: 'i-lucide-layers',
+  to: '/groups',
   onSelect: () => {
     open.value = false
   }
