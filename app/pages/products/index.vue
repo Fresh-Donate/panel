@@ -15,7 +15,6 @@ function authHeaders() {
   return { Authorization: `Bearer ${token.value}` }
 }
 
-// Product type config
 const productTypes: { value: ProductType, label: string, icon: string }[] = [
   { value: 'item', label: 'Предмет', icon: 'i-lucide-box' },
   { value: 'privilege', label: 'Привилегия', icon: 'i-lucide-crown' },
@@ -42,7 +41,6 @@ function getCurrencySymbol(currency: Currency) {
   return map[currency] ?? currency
 }
 
-// Fetch products from API
 const products = ref<Product[]>([])
 const loading = ref(true)
 
@@ -61,7 +59,6 @@ async function fetchProducts() {
 
 onMounted(fetchProducts)
 
-// Search / filter
 const search = ref('')
 const filterType = ref<ProductType | 'all'>('all')
 
@@ -76,7 +73,6 @@ const filteredProducts = computed(() => {
   })
 })
 
-// Table columns
 const columns: TableColumn<Product>[] = [
   { accessorKey: 'name', header: 'Название' },
   { accessorKey: 'type', header: 'Тип' },
@@ -86,7 +82,6 @@ const columns: TableColumn<Product>[] = [
   { accessorKey: 'actions', header: '' }
 ]
 
-// Delete
 async function deleteProduct(id: string) {
   try {
     await $fetch(`/products/${id}`, {
@@ -101,7 +96,6 @@ async function deleteProduct(id: string) {
   }
 }
 
-// Duplicate
 async function duplicateProduct(id: string) {
   try {
     const duplicated = await $fetch<Product>(`/products/${id}/duplicate`, {
@@ -116,7 +110,6 @@ async function duplicateProduct(id: string) {
   }
 }
 
-// Edit
 function openEdit(product: Product) {
   editingProduct.value = { ...product }
   showEdit.value = true
@@ -128,7 +121,6 @@ function onUpdated(updated: Product) {
   showEdit.value = false
 }
 
-// Dropdown actions
 function getActions(product: Product) {
   return [[{
     label: 'Редактировать',
@@ -173,7 +165,6 @@ function getActions(product: Product) {
     </template>
 
     <template #body>
-      <!-- Loading -->
       <div
         v-if="loading"
         class="flex items-center justify-center py-16"
@@ -185,7 +176,6 @@ function getActions(product: Product) {
       </div>
 
       <template v-else>
-        <!-- Toolbar -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
           <UInput
             v-model="search"
@@ -215,7 +205,6 @@ function getActions(product: Product) {
           </div>
         </div>
 
-        <!-- Table -->
         <UTable
           v-if="filteredProducts.length > 0"
           :data="filteredProducts"
@@ -296,7 +285,6 @@ function getActions(product: Product) {
           </template>
         </UTable>
 
-        <!-- Empty state -->
         <div
           v-if="filteredProducts.length === 0"
           class="text-center py-16"

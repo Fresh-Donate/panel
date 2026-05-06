@@ -38,14 +38,13 @@ watch([() => props.period, () => props.range, () => props.currency], async () =>
       params
     })
 
-    // Build a map from API data
     const dataMap = new Map<string, { amount: number, count: number }>()
     for (const item of chartData) {
       const key = normalizeKey(new Date(item.date))
       dataMap.set(key, { amount: item.amount, count: item.count })
     }
 
-    // Generate all dates in range and fill gaps with 0
+    // Fill in dates the API didn't return so the chart has even spacing.
     const intervals = ({
       daily: eachDayOfInterval,
       weekly: eachWeekOfInterval,

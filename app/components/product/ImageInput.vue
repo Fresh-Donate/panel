@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * Two-track product-image input: pick a file (uploaded + recompressed by
- * the backend) OR paste an external URL. Either way, the parent
- * `v-model:url` ends up holding the final URL string that gets persisted
- * on the product. The component owns just the upload state.
- */
 const url = defineModel<string>('url', { default: '' })
 
 const config = useRuntimeConfig()
@@ -19,8 +13,8 @@ async function onFileSelected(event: Event) {
   const file = target.files?.[0]
   if (!file) return
 
-  // Client-side gate so a 50 MB phone photo doesn't even start the request.
-  // Server enforces its own ceiling — this is purely UX.
+  // Client-side gate so a 50 MB phone photo doesn't even start the request;
+  // backend has its own hard ceiling.
   const MAX_BYTES = 10 * 1024 * 1024
   if (file.size > MAX_BYTES) {
     toast.add({
@@ -82,7 +76,6 @@ function clear() {
 
 <template>
   <div class="space-y-3">
-    <!-- Preview / placeholder -->
     <div class="flex items-start gap-3">
       <div class="size-20 rounded-lg overflow-hidden bg-elevated border border-default flex items-center justify-center shrink-0">
         <img

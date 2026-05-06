@@ -7,9 +7,6 @@ definePageMeta({ layout: 'auth' })
 const auth = useAuthStore()
 const toast = useToast()
 
-// `autocomplete` hints let browsers offer to save / autofill the login.
-// `type: 'text'` is used instead of `'name'` so the browser treats it as a
-// username field (combined with autocomplete="username").
 const fields: AuthFormField[] = [{
   name: 'login',
   type: 'text',
@@ -33,19 +30,11 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>
 
-/**
- * Ask the browser to remember the credentials.
- *
- * Chromium-family browsers surface the "Save password?" prompt on a regular
- * `<form>` POST submit, but `UAuthForm` handles the submit with JS (no real
- * navigation), so we nudge them via the Credential Management API. Firefox /
- * Safari ignore this call silently and rely on their own heuristics, which
- * the `autocomplete="username" / "current-password"` attributes on the fields
- * are enough to trigger.
- */
+// UAuthForm submits via JS (no real navigation), so Chromium's "Save
+// password?" prompt won't fire on its own — nudge it via the Credential
+// Management API. Firefox / Safari fall back to autocomplete heuristics.
 async function rememberCredentials(loginValue: string, password: string) {
   if (typeof window === 'undefined') return
-  // PasswordCredential is Chromium-only at time of writing.
   const PasswordCredentialCtor = (window as any).PasswordCredential
   if (!PasswordCredentialCtor || !navigator.credentials?.store) return
   try {
@@ -56,7 +45,7 @@ async function rememberCredentials(loginValue: string, password: string) {
     })
     await navigator.credentials.store(cred)
   } catch {
-    // Non-fatal: the browser may decline (private mode, user rejected, etc.)
+    // Browser may decline (private mode, user rejected) — non-fatal.
   }
 }
 

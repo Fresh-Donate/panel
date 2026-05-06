@@ -143,7 +143,6 @@ const columns = [
     </template>
 
     <template #body>
-      <!-- Filters -->
       <div class="flex flex-wrap items-center gap-3 mb-6">
         <UInput
           v-model="search"
@@ -156,7 +155,6 @@ const columns = [
         </span>
       </div>
 
-      <!-- Loading -->
       <div
         v-if="fetching"
         class="flex items-center justify-center py-12"
@@ -167,7 +165,6 @@ const columns = [
         />
       </div>
 
-      <!-- Table -->
       <UTable
         v-else-if="customers.length > 0"
         :columns="columns"
@@ -198,7 +195,6 @@ const columns = [
         </template>
       </UTable>
 
-      <!-- Empty -->
       <div
         v-else
         class="text-center py-16"
@@ -212,7 +208,6 @@ const columns = [
         </p>
       </div>
 
-      <!-- Pagination -->
       <div
         v-if="totalPages > 1"
         class="flex justify-center mt-6"

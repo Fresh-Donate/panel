@@ -6,25 +6,21 @@ const config = useRuntimeConfig()
 
 const open = ref(false)
 
-// Build info
 interface ServiceInfo { name: string, version: string }
 
 const services = ref<ServiceInfo[]>([])
 
 onMounted(async () => {
-  // Discover the shop's public origin first — it's stored on shop settings
-  // (DB-backed, configured from the admin "general" page) rather than env.
-  // If the backend is unreachable or shopUrl isn't set yet, the Shop ping
-  // is simply skipped.
+  // Shop origin lives on shop-settings (DB), not env — discover it first
+  // so we can ping the shop's /api/version. Skipped if unreachable or
+  // shopUrl is blank on a fresh install.
   let shopUrl = ''
   try {
     const shopSettings = await $fetch<{ shopUrl?: string }>('/shop-settings', {
       baseURL: config.public.apiBase as string
     })
     shopUrl = (shopSettings?.shopUrl || '').replace(/\/+$/, '')
-  } catch {
-    // Backend unreachable; skip Shop endpoint below.
-  }
+  } catch { /* backend unreachable */ }
 
   const results: ServiceInfo[] = []
 
@@ -41,9 +37,7 @@ onMounted(async () => {
       try {
         const data = await $fetch<{ version: string }>(ep.url)
         results.push({ name: ep.label, version: data.version })
-      } catch {
-        // skip unreachable services
-      }
+      } catch { /* unreachable */ }
     })
   )
 

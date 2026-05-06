@@ -58,9 +58,9 @@ watch(() => props.product, (p) => {
   }
 }, { immediate: true })
 
-// Privilege products are rank-style — quantity is always 1, the field is
-// hidden in the form, and we still send `1` to the backend so existing
-// schema validation and downstream logic don't break.
+// Privilege = rank-style: count is always 1, allowCustomCount is forced
+// off, the form hides both fields, and the backend still receives 1 so
+// schema validation passes.
 watch(() => state.type, (t) => {
   if (t === 'privilege') state.quantity = 1
 })
@@ -104,8 +104,6 @@ async function onSubmit() {
         name: state.name,
         price: state.price,
         currency: state.currency,
-        // Privilege products always ship with quantity=1 — the panel hides
-        // the input but the backend schema still requires a number.
         quantity: state.type === 'privilege' ? 1 : state.quantity,
         description: state.description || '',
         type: state.type,
