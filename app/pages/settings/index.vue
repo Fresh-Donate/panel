@@ -6,7 +6,8 @@ const config = useRuntimeConfig()
 const token = useCookie('auth_token')
 
 const schema = z.object({
-  demo_payments: z.boolean()
+  demo_payments: z.boolean(),
+  telemetry_enabled: z.boolean()
 })
 
 type DeliveryMethod = 'rcon' | 'plugin'
@@ -30,11 +31,16 @@ interface SettingsData {
   plugin_config: { token: string }
   base_currency: SupportedCurrency
   currency_rates: Record<string, number>
+  telemetry_enabled: boolean
+  installation_id: string
 }
 
 const state = reactive({
-  demo_payments: false
+  demo_payments: false,
+  telemetry_enabled: true
 })
+
+const installationId = ref('')
 
 const baseCurrency = ref<SupportedCurrency>('RUB')
 const rates = ref<Record<string, number>>({ ...DEFAULT_RATES_BY_BASE.RUB })
@@ -79,6 +85,8 @@ async function fetchSettings() {
       headers: { Authorization: `Bearer ${token.value}` }
     })
     state.demo_payments = data.demo_payments
+    state.telemetry_enabled = data.telemetry_enabled
+    installationId.value = data.installation_id || ''
     deliveryMethod.value = data.delivery_method
     savedDeliveryMethod.value = data.delivery_method
     rconState.host = data.rcon_config?.host || ''
@@ -108,9 +116,13 @@ async function onSubmitGeneral() {
       baseURL: config.public.apiBase as string,
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
-      body: { demo_payments: state.demo_payments }
+      body: {
+        demo_payments: state.demo_payments,
+        telemetry_enabled: state.telemetry_enabled
+      }
     })
     state.demo_payments = data.demo_payments
+    state.telemetry_enabled = data.telemetry_enabled
     toast.add({ title: 'Настройки сохранены', icon: 'i-lucide-check-circle', color: 'success' })
   } catch {
     toast.add({ title: 'Ошибка', description: 'Не удалось сохранить.', icon: 'i-lucide-alert-circle', color: 'error' })
@@ -254,6 +266,23 @@ function regenerateToken() {
             >
               <USwitch v-model="state.demo_payments" />
             </UFormField>
+
+            <USeparator />
+
+            <UFormField
+              label="Анонимная телеметрия"
+              name="telemetry_enabled"
+              description="Отправлять анонимные данные об инсталляции (версия, ОС, включённые шлюзы, способ выдачи) в FreshDonate. Помогает понимать, какие версии и конфигурации используются. Не содержит ников, email, ключей и сумм."
+            >
+              <USwitch v-model="state.telemetry_enabled" />
+            </UFormField>
+
+            <div
+              v-if="installationId"
+              class="text-xs text-muted font-mono"
+            >
+              Installation ID: {{ installationId }}
+            </div>
 
             <USeparator />
 

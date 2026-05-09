@@ -6,14 +6,35 @@ const config = useRuntimeConfig()
 
 const open = ref(false)
 
-interface ServiceInfo { name: string, version: string }
+interface ServiceInfo {
+  name: string
+  version: string
+  repo: string
+  latestVersion?: string
+  outdated?: boolean
+}
+
+const REPO_BY_NAME: Record<string, string> = {
+  Panel: 'Fresh-Donate/panel',
+  Backend: 'Fresh-Donate/backend',
+  Shop: 'Fresh-Donate/shop'
+}
+
+function compareVersions(a: string, b: string): number {
+  const norm = (v: string) => v.replace(/^v/i, '').split(/[-+]/)[0] || ''
+  const pa = norm(a).split('.').map(n => parseInt(n, 10) || 0)
+  const pb = norm(b).split('.').map(n => parseInt(n, 10) || 0)
+  for (let i = 0; i < 3; i++) {
+    const da = pa[i] || 0
+    const db = pb[i] || 0
+    if (da !== db) return da - db
+  }
+  return 0
+}
 
 const services = ref<ServiceInfo[]>([])
 
 onMounted(async () => {
-  // Shop origin lives on shop-settings (DB), not env — discover it first
-  // so we can ping the shop's /api/version. Skipped if unreachable or
-  // shopUrl is blank on a fresh install.
   let shopUrl = ''
   try {
     const shopSettings = await $fetch<{ shopUrl?: string }>('/shop-settings', {
@@ -36,12 +57,32 @@ onMounted(async () => {
     endpoints.map(async (ep) => {
       try {
         const data = await $fetch<{ version: string }>(ep.url)
-        results.push({ name: ep.label, version: data.version })
+        results.push({
+          name: ep.label,
+          version: data.version,
+          repo: REPO_BY_NAME[ep.label] || ''
+        })
       } catch { /* unreachable */ }
     })
   )
 
   services.value = results
+
+  await Promise.allSettled(
+    results.map(async (svc) => {
+      if (!svc.repo) return
+      try {
+        const release = await $fetch<{ tag_name: string }>(
+          `https://api.github.com/repos/${svc.repo}/releases/latest`,
+          { headers: { Accept: 'application/vnd.github+json' } }
+        )
+        svc.latestVersion = release.tag_name
+        svc.outdated = compareVersions(svc.version, release.tag_name) < 0
+      } catch { /* unreachable / no releases */ }
+    })
+  )
+
+  services.value = [...results]
 })
 
 const links = [[{
@@ -239,7 +280,26 @@ const groups = computed(() => [{
             class="flex items-center justify-between"
           >
             <span>{{ svc.name }}</span>
-            <span class="text-muted/60">{{ svc.version }}</span>
+            <UTooltip
+              v-if="svc.outdated && svc.repo"
+              :text="`Доступна новая версия: ${svc.latestVersion}`"
+            >
+              <NuxtLink
+                :to="`https://github.com/${svc.repo}/releases/latest`"
+                target="_blank"
+                class="flex items-center gap-1 text-warning hover:underline"
+              >
+                <span>{{ svc.version }}</span>
+                <UIcon
+                  name="i-lucide-circle-arrow-up"
+                  class="size-3"
+                />
+              </NuxtLink>
+            </UTooltip>
+            <span
+              v-else
+              class="text-muted/60"
+            >{{ svc.version }}</span>
           </div>
         </div>
         <div
@@ -247,12 +307,12 @@ const groups = computed(() => [{
           class="flex justify-center items-center py-2 w-full"
         >
           <UTooltip
-            :text="services.map(s => `${s.name} ${s.version}`).join(' | ')"
+            :text="services.map(s => s.outdated ? `${s.name} ${s.version} → ${s.latestVersion}` : `${s.name} ${s.version}`).join(' | ')"
           >
             <UButton
-              icon="i-lucide-info"
+              :icon="services.some(s => s.outdated) ? 'i-lucide-circle-arrow-up' : 'i-lucide-info'"
               variant="ghost"
-              color="neutral"
+              :color="services.some(s => s.outdated) ? 'warning' : 'neutral'"
               size="sm"
             />
           </UTooltip>
