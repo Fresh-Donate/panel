@@ -5,14 +5,14 @@ const props = defineProps<{
   provider: PaymentProvider
 }>()
 
+const saving = defineModel<boolean>('saving', { required: true })
+
 const emit = defineEmits<{
   'update:enabled': [value: boolean]
   'update:testMode': [value: boolean]
 }>()
 
 // Providers that support a dedicated test / sandbox environment.
-// Others will still accept the `testMode` field on the API but the toggle
-// wouldn't do anything meaningful, so we hide it.
 const PROVIDERS_WITH_SANDBOX = ['wata']
 const supportsTestMode = computed(() =>
   PROVIDERS_WITH_SANDBOX.includes(props.provider.providerId)
@@ -43,6 +43,7 @@ const supportsTestMode = computed(() =>
       </div>
       <USwitch
         :model-value="provider.enabled"
+        :loading="saving"
         @update:model-value="emit('update:enabled', $event)"
       />
     </div>

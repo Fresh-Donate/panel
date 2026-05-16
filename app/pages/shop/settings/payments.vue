@@ -110,8 +110,9 @@ async function saveProvider() {
         <!-- Left: Provider Settings -->
         <div class="space-y-6 min-w-0 col-span-2">
           <PaymentProviderHeader
+            v-model:saving="saving"
             :provider="selectedProvider"
-            @update:enabled="selectedProvider.enabled = $event"
+            @update:enabled="selectedProvider.enabled = $event; saveProvider()"
             @update:test-mode="selectedProvider.testMode = $event"
           />
 
