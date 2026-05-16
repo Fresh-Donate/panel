@@ -37,6 +37,7 @@ interface PaymentItem {
     deliveryLogs?: DeliveryLog[]
     previousDeliveryLogs?: DeliveryLog[]
   }
+  externalPaymentUrl: string | null
   createdAt: string
   updatedAt: string
   userSelectedCount: number
@@ -428,6 +429,22 @@ const columns = [
             </p>
             <p class="text-[10px] font-mono text-muted break-all">
               {{ selected.id }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-muted mb-0.5">
+              Платёжная система
+            </p>
+            <p class="text-xs">
+              {{ selected.providerId }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-muted mb-0.5">
+              Ссылка оплаты
+            </p>
+            <p class="text-[10px] font-mono text-muted truncate">
+              {{ selected.externalPaymentUrl }}
             </p>
           </div>
         </div>
