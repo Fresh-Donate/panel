@@ -6,9 +6,12 @@ interface PaymentOptionItem {
   name: string
   icon: string
   providerId: string
+  redirectUrl: string | null
   sortOrder: number
   enabled: boolean
 }
+
+type OptionMode = 'provider' | 'redirect'
 
 interface ProviderChoice {
   providerId: string
@@ -31,20 +34,46 @@ const showEdit = ref(false)
 const schema = z.object({
   name: z.string().min(1, 'Название обязательно').max(128, 'Макс. 128 символов'),
   icon: z.string().min(1, 'Иконка обязательна').max(128, 'Макс. 128 символов'),
-  providerId: z.string().min(1, 'Выберите платёжную систему')
+  mode: z.enum(['provider', 'redirect']),
+  providerId: z.string().max(32),
+  redirectUrl: z.string().max(1024)
+}).superRefine((d, ctx) => {
+  if (d.mode === 'provider' && !d.providerId) {
+    ctx.addIssue({ code: 'custom', path: ['providerId'], message: 'Выберите платёжную систему' })
+  }
+  if (d.mode === 'redirect' && !d.redirectUrl.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['redirectUrl'], message: 'Укажите ссылку для перенаправления' })
+  }
 })
 
-const createState = reactive({
+interface FormState {
+  name: string
+  icon: string
+  mode: OptionMode
+  providerId: string
+  redirectUrl: string
+}
+
+const createState = reactive<FormState>({
   name: '',
   icon: '',
-  providerId: ''
+  mode: 'provider',
+  providerId: '',
+  redirectUrl: ''
 })
 
-const editState = reactive({
+const editState = reactive<FormState>({
   name: '',
   icon: '',
-  providerId: ''
+  mode: 'provider',
+  providerId: '',
+  redirectUrl: ''
 })
+
+const modeItems = [
+  { label: 'Через платёжную систему', value: 'provider' as const },
+  { label: 'Перенаправление по ссылке', value: 'redirect' as const }
+]
 
 const providerItems = computed(() =>
   providers.value.map(p => ({ label: p.name, value: p.providerId }))
@@ -52,6 +81,10 @@ const providerItems = computed(() =>
 
 function getProviderName(providerId: string): string {
   return providers.value.find(p => p.providerId === providerId)?.name || providerId
+}
+
+function describeOption(option: PaymentOptionItem): string {
+  return option.redirectUrl ? 'Перенаправление по ссылке' : getProviderName(option.providerId)
 }
 
 async function fetchData() {
@@ -86,7 +119,9 @@ onMounted(fetchData)
 function openCreate() {
   createState.name = ''
   createState.icon = ''
+  createState.mode = 'provider'
   createState.providerId = providers.value[0]?.providerId || ''
+  createState.redirectUrl = ''
   showCreate.value = true
 }
 
@@ -94,8 +129,19 @@ function openEdit(option: PaymentOptionItem) {
   editingOption.value = option
   editState.name = option.name
   editState.icon = option.icon
+  editState.mode = option.redirectUrl ? 'redirect' : 'provider'
   editState.providerId = option.providerId
+  editState.redirectUrl = option.redirectUrl ?? ''
   showEdit.value = true
+}
+
+function buildPayload(s: FormState) {
+  return {
+    name: s.name,
+    icon: s.icon,
+    providerId: s.mode === 'provider' ? s.providerId : '',
+    redirectUrl: s.mode === 'redirect' ? s.redirectUrl.trim() : null
+  }
 }
 
 async function onCreate() {
@@ -105,11 +151,7 @@ async function onCreate() {
       baseURL: config.public.apiBase as string,
       method: 'POST',
       headers: { Authorization: `Bearer ${token.value}` },
-      body: {
-        name: createState.name,
-        icon: createState.icon,
-        providerId: createState.providerId
-      }
+      body: buildPayload(createState)
     })
     options.value.push(created)
     showCreate.value = false
@@ -139,11 +181,7 @@ async function onEdit() {
       baseURL: config.public.apiBase as string,
       method: 'PUT',
       headers: { Authorization: `Bearer ${token.value}` },
-      body: {
-        name: editState.name,
-        icon: editState.icon,
-        providerId: editState.providerId
-      }
+      body: buildPayload(editState)
     })
     const idx = options.value.findIndex(o => o.id === updated.id)
     if (idx !== -1) options.value[idx] = updated
@@ -293,8 +331,8 @@ async function deleteOption(option: PaymentOptionItem) {
                   <p class="font-semibold truncate">
                     {{ option.name }}
                   </p>
-                  <p class="text-xs text-muted mt-0.5">
-                    {{ getProviderName(option.providerId) }}
+                  <p class="text-xs text-muted mt-0.5 truncate">
+                    {{ describeOption(option) }}
                   </p>
                 </div>
               </div>
@@ -379,6 +417,21 @@ async function deleteOption(option: PaymentOptionItem) {
             </UFormField>
 
             <UFormField
+              label="Тип обработки"
+              name="mode"
+              description="Через подключённую платёжную систему или редиректом по произвольной ссылке."
+              required
+            >
+              <USelectMenu
+                v-model="createState.mode"
+                :items="modeItems"
+                value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              v-if="createState.mode === 'provider'"
               label="Платёжная система"
               name="providerId"
               description="Какая платёжная система будет обрабатывать оплату."
@@ -388,6 +441,20 @@ async function deleteOption(option: PaymentOptionItem) {
                 v-model="createState.providerId"
                 :items="providerItems"
                 value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              v-else
+              label="Ссылка для перенаправления"
+              name="redirectUrl"
+              description="Доступные плейсхолдеры: {nickname}, {email}, {amount}, {price}, {currency}, {product}, {count}, {productId}."
+              required
+            >
+              <UInput
+                v-model="createState.redirectUrl"
+                placeholder="https://example.com/pay?sum={amount}&user={nickname}"
                 class="w-full"
               />
             </UFormField>
@@ -460,6 +527,21 @@ async function deleteOption(option: PaymentOptionItem) {
             </UFormField>
 
             <UFormField
+              label="Тип обработки"
+              name="mode"
+              description="Через подключённую платёжную систему или редиректом по произвольной ссылке."
+              required
+            >
+              <USelectMenu
+                v-model="editState.mode"
+                :items="modeItems"
+                value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              v-if="editState.mode === 'provider'"
               label="Платёжная система"
               name="providerId"
               description="Какая платёжная система будет обрабатывать оплату."
@@ -469,6 +551,20 @@ async function deleteOption(option: PaymentOptionItem) {
                 v-model="editState.providerId"
                 :items="providerItems"
                 value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              v-else
+              label="Ссылка для перенаправления"
+              name="redirectUrl"
+              description="Доступные плейсхолдеры: {nickname}, {email}, {amount}, {price}, {currency}, {product}, {count}, {productId}."
+              required
+            >
+              <UInput
+                v-model="editState.redirectUrl"
+                placeholder="https://example.com/pay?sum={amount}&user={nickname}"
                 class="w-full"
               />
             </UFormField>
