@@ -53,8 +53,10 @@ async function saveProvider() {
         enabled: provider.enabled,
         testMode: provider.testMode,
         credentials: provider.credentials,
+        providerConfig: provider.providerConfig,
         commissionPercent: provider.commissionPercent,
-        commissionRule: provider.commissionRule
+        commissionRule: provider.commissionRule,
+        supportedCurrencies: provider.supportedCurrencies
       }
     })
 
@@ -79,6 +81,16 @@ async function saveProvider() {
   } finally {
     saving.value = false
   }
+}
+
+function setAccountCurrency(currency: string) {
+  selectedProvider.value.supportedCurrencies = [currency]
+}
+
+function setCoinPackage(denomination: string, packageId: string) {
+  const config = selectedProvider.value.providerConfig || {}
+  const coinPackages = { ...(config.coinPackages || {}), [denomination]: packageId }
+  selectedProvider.value.providerConfig = { ...config, coinPackages }
 }
 </script>
 
@@ -117,9 +129,20 @@ async function saveProvider() {
           />
 
           <template v-if="selectedProvider.enabled">
+            <PaymentAccountCurrencyCard
+              :provider="selectedProvider"
+              @update:currency="setAccountCurrency"
+            />
+
             <PaymentCredentialsCard
               :provider="selectedProvider"
               @update:credential="(key, val) => selectedProvider.credentials[key] = val"
+            />
+
+            <PaymentTebexCoinPackagesCard
+              v-if="selectedProvider.providerId === 'tebex'"
+              :provider="selectedProvider"
+              @update:coin="setCoinPackage"
             />
 
             <PaymentCommissionPercentCard

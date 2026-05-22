@@ -20,6 +20,11 @@ const credentialLabels: Record<string, Record<string, { label: string, placehold
   },
   wata: {
     apiKey: { label: 'Access Token', placeholder: 'JWT-токен из кабинета Wata (prod или sandbox)' }
+  },
+  tebex: {
+    webstoreToken: { label: 'Webstore Token', placeholder: 'Публичный токен из настроек Tebex (Webstore Builder → API Keys)' },
+    privateKey: { label: 'Private Key', placeholder: 'Приватный ключ из настроек Tebex' },
+    webhookSecret: { label: 'Webhook Secret', placeholder: 'Секрет для подписи webhook (Developers → Webhooks → Endpoints)' }
   }
 }
 
