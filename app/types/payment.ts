@@ -18,4 +18,8 @@ export interface PaymentProvider {
   commissionPercent: number
   commissionRule: CommissionRule
   supportedCurrencies: string[]
+  minAmount: number
 }
+
+export const MIN_AMOUNT_LOWER = 0.01
+export const MIN_AMOUNT_UPPER = 10000

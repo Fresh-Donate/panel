@@ -9,18 +9,26 @@ const selectedProviderId = ref('yookassa')
 const providers = reactive<PaymentProvider[]>([])
 const fetching = ref(true)
 const saving = ref(false)
+const baseCurrency = ref<string>('RUB')
 
 async function fetchProviders() {
   fetching.value = true
   try {
-    const data = await $fetch<PaymentProvider[]>('/payment-providers', {
-      baseURL: config.public.apiBase as string,
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
+    const [data, settings] = await Promise.all([
+      $fetch<PaymentProvider[]>('/payment-providers', {
+        baseURL: config.public.apiBase as string,
+        headers: { Authorization: `Bearer ${token.value}` }
+      }),
+      $fetch<{ base_currency: string }>('/settings', {
+        baseURL: config.public.apiBase as string,
+        headers: { Authorization: `Bearer ${token.value}` }
+      })
+    ])
     providers.splice(0, providers.length, ...data)
     if (data.length > 0 && !data.find(p => p.providerId === selectedProviderId.value)) {
       selectedProviderId.value = data[0].providerId
     }
+    baseCurrency.value = settings.base_currency
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -56,7 +64,8 @@ async function saveProvider() {
         providerConfig: provider.providerConfig,
         commissionPercent: provider.commissionPercent,
         commissionRule: provider.commissionRule,
-        supportedCurrencies: provider.supportedCurrencies
+        supportedCurrencies: provider.supportedCurrencies,
+        minAmount: provider.minAmount
       }
     })
 
@@ -153,6 +162,11 @@ function setCoinPackage(denomination: string, packageId: string) {
               v-model:rule="selectedProvider.commissionRule"
               :commission-percent="selectedProvider.commissionPercent"
               :currency="selectedProvider.supportedCurrencies[0]"
+            />
+
+            <PaymentMinAmountCard
+              v-model:min-amount="selectedProvider.minAmount"
+              :base-currency="baseCurrency"
             />
 
             <div class="flex justify-end">
