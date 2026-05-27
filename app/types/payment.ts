@@ -14,9 +14,12 @@ export interface PaymentProvider {
   enabled: boolean
   testMode: boolean
   credentials: Record<string, string>
-  // Default commission used as up-front estimate at checkout — overwritten by
-  // real fee from the provider's webhook once the payment completes.
+  providerConfig: Record<string, any>
   commissionPercent: number
   commissionRule: CommissionRule
   supportedCurrencies: string[]
+  minAmount: number
 }
+
+export const MIN_AMOUNT_LOWER = 0.01
+export const MIN_AMOUNT_UPPER = 10000

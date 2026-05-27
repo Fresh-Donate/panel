@@ -15,9 +15,8 @@ interface DeliveryLog {
 
 interface PaymentItem {
   id: string
-  customerId: string
-  customerNickname?: string
-  customerEmail?: string
+  customerNickname: string
+  customerEmail: string
   productName: string
   productPrice: number
   productCurrency: string

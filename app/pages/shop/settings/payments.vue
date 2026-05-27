@@ -9,18 +9,26 @@ const selectedProviderId = ref('yookassa')
 const providers = reactive<PaymentProvider[]>([])
 const fetching = ref(true)
 const saving = ref(false)
+const baseCurrency = ref<string>('RUB')
 
 async function fetchProviders() {
   fetching.value = true
   try {
-    const data = await $fetch<PaymentProvider[]>('/payment-providers', {
-      baseURL: config.public.apiBase as string,
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
+    const [data, settings] = await Promise.all([
+      $fetch<PaymentProvider[]>('/payment-providers', {
+        baseURL: config.public.apiBase as string,
+        headers: { Authorization: `Bearer ${token.value}` }
+      }),
+      $fetch<{ base_currency: string }>('/settings', {
+        baseURL: config.public.apiBase as string,
+        headers: { Authorization: `Bearer ${token.value}` }
+      })
+    ])
     providers.splice(0, providers.length, ...data)
     if (data.length > 0 && !data.find(p => p.providerId === selectedProviderId.value)) {
       selectedProviderId.value = data[0].providerId
     }
+    baseCurrency.value = settings.base_currency
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -53,8 +61,11 @@ async function saveProvider() {
         enabled: provider.enabled,
         testMode: provider.testMode,
         credentials: provider.credentials,
+        providerConfig: provider.providerConfig,
         commissionPercent: provider.commissionPercent,
-        commissionRule: provider.commissionRule
+        commissionRule: provider.commissionRule,
+        supportedCurrencies: provider.supportedCurrencies,
+        minAmount: provider.minAmount
       }
     })
 
@@ -79,6 +90,16 @@ async function saveProvider() {
   } finally {
     saving.value = false
   }
+}
+
+function setAccountCurrency(currency: string) {
+  selectedProvider.value.supportedCurrencies = [currency]
+}
+
+function setCoinPackage(denomination: string, packageId: string) {
+  const config = selectedProvider.value.providerConfig || {}
+  const coinPackages = { ...(config.coinPackages || {}), [denomination]: packageId }
+  selectedProvider.value.providerConfig = { ...config, coinPackages }
 }
 </script>
 
@@ -117,9 +138,20 @@ async function saveProvider() {
           />
 
           <template v-if="selectedProvider.enabled">
+            <PaymentAccountCurrencyCard
+              :provider="selectedProvider"
+              @update:currency="setAccountCurrency"
+            />
+
             <PaymentCredentialsCard
               :provider="selectedProvider"
               @update:credential="(key, val) => selectedProvider.credentials[key] = val"
+            />
+
+            <PaymentTebexCoinPackagesCard
+              v-if="selectedProvider.providerId === 'tebex'"
+              :provider="selectedProvider"
+              @update:coin="setCoinPackage"
             />
 
             <PaymentCommissionPercentCard
@@ -130,6 +162,11 @@ async function saveProvider() {
               v-model:rule="selectedProvider.commissionRule"
               :commission-percent="selectedProvider.commissionPercent"
               :currency="selectedProvider.supportedCurrencies[0]"
+            />
+
+            <PaymentMinAmountCard
+              v-model:min-amount="selectedProvider.minAmount"
+              :base-currency="baseCurrency"
             />
 
             <div class="flex justify-end">
