@@ -25,6 +25,7 @@ export interface Product {
   commands: string[]
   imageUrl?: string
   allowCustomCount: boolean
+  forceDelivery: boolean
   activePromotions?: ProductPromotion[]
   discountPercent?: number
   discountedPrice?: number
