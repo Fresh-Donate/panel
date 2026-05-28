@@ -75,7 +75,7 @@ async function onSubmit() {
     emit('created', promotion)
     toast.add({
       title: 'Акция создана',
-      description: `«${promotion.name}» добавлена.`,
+      description: `"${promotion.name}" добавлена.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })

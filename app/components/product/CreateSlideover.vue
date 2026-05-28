@@ -111,7 +111,7 @@ async function onSubmit() {
     emit('created', product)
     toast.add({
       title: 'Товар создан',
-      description: `«${product.name}» успешно добавлен.`,
+      description: `"${product.name}" успешно добавлен.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })

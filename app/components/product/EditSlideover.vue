@@ -117,7 +117,7 @@ async function onSubmit() {
     emit('updated', updated)
     toast.add({
       title: 'Товар обновлён',
-      description: `«${updated.name}» успешно сохранён.`,
+      description: `"${updated.name}" успешно сохранён.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })

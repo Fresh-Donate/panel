@@ -38,11 +38,29 @@ function packageIdFor(denom: string): string {
       </UFormField>
 
       <UAlert
+        ID
         icon="i-lucide-info"
         color="info"
         variant="subtle"
         title="Как заполнить"
-        description="В Tebex Dashboard → Packages создайте 6 пакетов с ценами выше. Тип — Single payment, имя можно «Coin 1000» и т.д. Откройте каждый пакет, скопируйте Package ID из URL или из API-страницы и вставьте сюда."
+        description="В Tebex Dashboard → Packages создайте 6 пакетов с ценами выше. Тип — Single payment, имя можно "
+        Coin
+        1000"
+        и
+        т.д.
+        откройте
+        каждый
+        пакет,
+        скопируйте
+        Package
+        из
+        URL
+        или
+        из
+        API-страницы
+        и
+        вставьте
+        сюда."
       />
     </div>
   </UPageCard>
