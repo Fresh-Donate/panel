@@ -2,6 +2,7 @@
 import { sub } from 'date-fns'
 import { CalendarDate, getLocalTimeZone } from '@internationalized/date'
 import type { Period, Range } from '~/types'
+import HomeTopProductsCard from '~/components/home/HomeTopProductsCard.vue'
 
 const config = useRuntimeConfig()
 const token = useCookie('auth_token')
@@ -196,6 +197,17 @@ const columns = [
           :currency="chartCurrency || undefined"
           :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
           color="var(--ui-success)"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+        <HomeProvidersCard
+          :range="range"
+          :currency="chartCurrency || undefined"
+        />
+        <HomeTopProductsCard
+          :range="range"
+          :currency="chartCurrency || undefined"
         />
       </div>
 
