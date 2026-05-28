@@ -80,23 +80,26 @@ const columns = [
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
+        <template #right>
+          <div>
+            <div class="flex items-center gap-2">
+              <UButton
+                v-for="opt in currencyOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :variant="chartCurrency === opt.value ? 'soft' : 'ghost'"
+                :color="chartCurrency === opt.value ? 'primary' : 'neutral'"
+                size="xs"
+                @click="chartCurrency = opt.value"
+              />
+            </div>
+          </div>
+        </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
       <HomeStats />
-
-      <div class="flex items-center gap-2 mt-6 mb-2">
-        <UButton
-          v-for="opt in currencyOptions"
-          :key="opt.value"
-          :label="opt.label"
-          :variant="chartCurrency === opt.value ? 'soft' : 'ghost'"
-          :color="chartCurrency === opt.value ? 'primary' : 'neutral'"
-          size="xs"
-          @click="chartCurrency = opt.value"
-        />
-      </div>
 
       <HomeChart
         :period="period"
