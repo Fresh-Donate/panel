@@ -75,6 +75,8 @@ const currencySymbols: Record<string, string> = {
   EUR: '€'
 }
 
+const currencySymbol = computed(() => currencySymbols[chartCurrency.value] || '₽')
+
 const statusLabels: Record<string, { label: string, color: string }> = {
   pending: { label: 'Ожидает', color: 'warning' },
   paid: { label: 'Оплачен', color: 'info' },
@@ -178,11 +180,25 @@ const columns = [
         :currency="chartCurrency || undefined"
       />
 
-      <HomeChart
-        :period="period"
-        :range="range"
-        :currency="chartCurrency || undefined"
-      />
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HomeMetricChart
+          title="Выручка"
+          metric="amount"
+          :period="period"
+          :range="range"
+          :currency="chartCurrency || undefined"
+          :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+        />
+        <HomeMetricChart
+          title="Покупки"
+          metric="count"
+          :period="period"
+          :range="range"
+          :currency="chartCurrency || undefined"
+          :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
+          color="var(--ui-success)"
+        />
+      </div>
 
       <!-- Recent Payments -->
       <UPageCard
