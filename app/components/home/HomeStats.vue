@@ -15,13 +15,14 @@ const currencySymbol = computed(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-4 gap-6">
+  <div class="grid grid-cols-3 gap-6">
     <HomeStatCard
-      icon="lucide:user"
-      label="Клиенты (Неделя)"
-      :current="summary?.customers?.current ?? 0"
-      :previous="summary?.customers?.previous ?? 0"
-      :sparkline="summary?.customers?.sparkline ?? []"
+      icon="lucide:wallet"
+      label="Выручка (Неделя)"
+      :current="summary?.revenue?.current ?? 0"
+      :previous="summary?.revenue?.previous ?? 0"
+      :sparkline="summary?.revenue?.sparkline ?? []"
+      :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
     />
 
     <HomeStatCard
@@ -30,15 +31,6 @@ const currencySymbol = computed(() => {
       :current="summary?.payments?.current ?? 0"
       :previous="summary?.payments?.previous ?? 0"
       :sparkline="summary?.payments?.sparkline ?? []"
-    />
-
-    <HomeStatCard
-      icon="lucide:percent"
-      label="Комиссии (Неделя)"
-      :current="summary?.commission?.current ?? 0"
-      :previous="summary?.commission?.previous ?? 0"
-      :sparkline="summary?.commission?.sparkline ?? []"
-      :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
     />
 
     <HomeStatCard
