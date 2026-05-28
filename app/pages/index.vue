@@ -52,6 +52,13 @@ function applyPreset(preset: typeof rangePresets[number]) {
   }
 }
 
+const { load: loadSummary } = useStatsSummary()
+watch(
+  [range, chartCurrency],
+  () => loadSummary(range.value.start, range.value.end, chartCurrency.value || undefined),
+  { immediate: true }
+)
+
 const currencyOptions = [
   { label: '₽ RUB', value: 'RUB' },
   { label: '$ USD', value: 'USD' },
@@ -175,10 +182,7 @@ const columns = [
     </template>
 
     <template #body>
-      <HomeStats
-        :range="range"
-        :currency="chartCurrency || undefined"
-      />
+      <HomeStats />
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HomeMetricChart
@@ -201,14 +205,8 @@ const columns = [
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-        <HomeProvidersCard
-          :range="range"
-          :currency="chartCurrency || undefined"
-        />
-        <HomeTopProductsCard
-          :range="range"
-          :currency="chartCurrency || undefined"
-        />
+        <HomeProvidersCard />
+        <HomeTopProductsCard />
         <HomeTopCustomersCard
           :range="range"
           :currency="chartCurrency || undefined"
