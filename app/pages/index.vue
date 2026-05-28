@@ -14,7 +14,7 @@ const range = shallowRef<Range>({
   end: new Date()
 })
 const period = ref<Period>('daily')
-const chartCurrency = ref('')
+const chartCurrency = ref('RUB')
 
 const rangePresets: { label: string, value: RangePreset, days?: number }[] = [
   { label: '7 дней', value: '7d', days: 7 },
@@ -52,7 +52,6 @@ function applyPreset(preset: typeof rangePresets[number]) {
 }
 
 const currencyOptions = [
-  { label: 'Все', value: '' },
   { label: '₽ RUB', value: 'RUB' },
   { label: '$ USD', value: 'USD' },
   { label: '€ EUR', value: 'EUR' }
