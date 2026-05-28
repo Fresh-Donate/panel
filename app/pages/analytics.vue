@@ -217,7 +217,7 @@ const columns = [
       <!-- Recent Payments -->
       <UPageCard
         title="Последние покупки"
-        :ui="{ body: '!p-0' }"
+        :ui="{ body: '!p-0', container: 'min-w-0 !block' }"
         class="max-w-full min-w-0"
       >
         <div
