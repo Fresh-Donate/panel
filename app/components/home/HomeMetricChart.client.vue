@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
+import { eachHourOfInterval, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfHour, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -47,6 +47,7 @@ watch([() => props.period, () => props.range, () => props.currency, () => props.
 
     // Fill in dates the API didn't return so the chart has even spacing.
     const intervals = ({
+      hourly: eachHourOfInterval,
       daily: eachDayOfInterval,
       weekly: eachWeekOfInterval,
       monthly: eachMonthOfInterval
@@ -64,6 +65,7 @@ watch([() => props.period, () => props.range, () => props.currency, () => props.
 function normalizeKey(date: Date): string {
   if (props.period === 'monthly') return format(startOfMonth(date), 'yyyy-MM')
   if (props.period === 'weekly') return format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  if (props.period === 'hourly') return format(startOfHour(date), 'yyyy-MM-dd HH')
   return format(startOfDay(date), 'yyyy-MM-dd')
 }
 
@@ -76,6 +78,7 @@ const color = computed(() => props.color || 'var(--ui-primary)')
 
 const formatDateLabel = (date: Date): string =>
   ({
+    hourly: format(date, 'HH:00'),
     daily: format(date, 'dd.MM.yy'),
     weekly: format(date, 'd MMM'),
     monthly: format(date, 'MMM yyy')
@@ -140,7 +143,7 @@ const template = (d: DataRecord) => `
 
     <div
       v-else
-      class="h-96 flex items-center justify-center"
+      class="h-72 flex items-center justify-center"
     >
       <p class="text-sm text-muted">
         Нет данных за выбранный период

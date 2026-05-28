@@ -18,7 +18,7 @@ const currencySymbol = computed(() => {
   <div class="grid grid-cols-4 gap-6">
     <HomeStatCard
       icon="lucide:user"
-      label="Клиенты (Неделя)"
+      label="Клиенты"
       :current="summary?.customers?.current ?? 0"
       :previous="summary?.customers?.previous ?? 0"
       :sparkline="summary?.customers?.sparkline ?? []"
@@ -26,7 +26,7 @@ const currencySymbol = computed(() => {
 
     <HomeStatCard
       icon="lucide:shopping-cart"
-      label="Платежей (Неделя)"
+      label="Платежей"
       :current="summary?.payments?.current ?? 0"
       :previous="summary?.payments?.previous ?? 0"
       :sparkline="summary?.payments?.sparkline ?? []"
@@ -34,7 +34,7 @@ const currencySymbol = computed(() => {
 
     <HomeStatCard
       icon="lucide:percent"
-      label="Комиссии (Неделя)"
+      label="Комиссии"
       :current="summary?.commission?.current ?? 0"
       :previous="summary?.commission?.previous ?? 0"
       :sparkline="summary?.commission?.sparkline ?? []"
@@ -43,7 +43,7 @@ const currencySymbol = computed(() => {
 
     <HomeStatCard
       icon="lucide:receipt"
-      label="Средний чек (Неделя)"
+      label="Средний чек"
       :current="summary?.avgOrder?.current ?? 0"
       :previous="summary?.avgOrder?.previous ?? 0"
       :sparkline="summary?.avgOrder?.sparkline ?? []"

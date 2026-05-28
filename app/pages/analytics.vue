@@ -3,6 +3,7 @@ import { sub } from 'date-fns'
 import { CalendarDate, getLocalTimeZone } from '@internationalized/date'
 import type { Period, Range } from '~/types'
 import HomeTopProductsCard from '~/components/home/HomeTopProductsCard.vue'
+import AnalyticStats from '~/components/home/AnalyticStats.vue'
 
 const config = useRuntimeConfig()
 const token = useCookie('auth_token')
@@ -182,7 +183,7 @@ const columns = [
     </template>
 
     <template #body>
-      <HomeStats />
+      <AnalyticStats />
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HomeMetricChart

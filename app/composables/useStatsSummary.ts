@@ -1,8 +1,8 @@
 import type { StatsSummary } from '~/types'
 
-export function useStatsSummary() {
-  const summary = useState<StatsSummary | null>('stats-summary', () => null)
-  const loading = useState<boolean>('stats-summary-loading', () => false)
+export function useStatsSummary(key: string = 'stats-summary') {
+  const summary = useState<StatsSummary | null>(key, () => null)
+  const loading = useState<boolean>(`${key}-loading`, () => false)
 
   const config = useRuntimeConfig()
   const token = useCookie('auth_token')

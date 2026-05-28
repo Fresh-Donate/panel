@@ -1,4 +1,4 @@
-export type Period = 'daily' | 'weekly' | 'monthly'
+export type Period = 'hourly' | 'daily' | 'weekly' | 'monthly'
 
 export interface Range {
   start: Date
