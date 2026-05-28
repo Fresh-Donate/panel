@@ -15,7 +15,7 @@ const currencySymbol = computed(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
     <HomeStatCard
       icon="lucide:wallet"
       label="Выручка (Неделя)"
@@ -33,13 +33,15 @@ const currencySymbol = computed(() => {
       :sparkline="summary?.payments?.sparkline ?? []"
     />
 
-    <HomeStatCard
-      icon="lucide:receipt"
-      label="Средний чек (Неделя)"
-      :current="summary?.avgOrder?.current ?? 0"
-      :previous="summary?.avgOrder?.previous ?? 0"
-      :sparkline="summary?.avgOrder?.sparkline ?? []"
-      :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
-    />
+    <div class="lg:col-span-2 xl:col-span-1">
+      <HomeStatCard
+        icon="lucide:receipt"
+        label="Средний чек (Неделя)"
+        :current="summary?.avgOrder?.current ?? 0"
+        :previous="summary?.avgOrder?.previous ?? 0"
+        :sparkline="summary?.avgOrder?.sparkline ?? []"
+        :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+      />
+    </div>
   </div>
 </template>

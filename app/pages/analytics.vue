@@ -205,7 +205,7 @@ const columns = [
         />
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
         <HomeProvidersCard />
         <HomeTopProductsCard />
         <HomeTopCustomersCard
@@ -218,48 +218,53 @@ const columns = [
       <UPageCard
         title="Последние покупки"
         :ui="{ body: '!p-0' }"
+        class="max-w-full min-w-0"
       >
-        <UTable
+        <div
           v-if="recentPayments.length > 0"
-          :columns="columns"
-          :data="recentPayments"
+          class="w-full max-w-full overflow-x-auto"
         >
-          <template #productName-cell="{ row }">
-            <span class="font-medium">{{ row.original.productName }}</span>
-          </template>
+          <UTable
+            :columns="columns"
+            :data="recentPayments"
+          >
+            <template #productName-cell="{ row }">
+              <span class="font-medium">{{ row.original.productName }}</span>
+            </template>
 
-          <template #customer-cell="{ row }">
-            <div>
-              <p class="font-medium">
-                {{ row.original.customerNickname || '—' }}
-              </p>
-              <p class="text-xs text-muted">
-                {{ row.original.customerEmail || '' }}
-              </p>
-            </div>
-          </template>
+            <template #customer-cell="{ row }">
+              <div>
+                <p class="font-medium">
+                  {{ row.original.customerNickname || '—' }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ row.original.customerEmail || '' }}
+                </p>
+              </div>
+            </template>
 
-          <template #totalAmount-cell="{ row }">
-            <span class="font-semibold">
-              {{ Number(row.original.totalAmount).toLocaleString() }}{{ currencySymbols[row.original.currency] || row.original.currency }}
-            </span>
-          </template>
+            <template #totalAmount-cell="{ row }">
+              <span class="font-semibold">
+                {{ Number(row.original.totalAmount).toLocaleString() }}{{ currencySymbols[row.original.currency] || row.original.currency }}
+              </span>
+            </template>
 
-          <template #status-cell="{ row }">
-            <UBadge
-              :label="statusLabels[row.original.status]?.label || row.original.status"
-              :color="(statusLabels[row.original.status]?.color as any) || 'neutral'"
-              variant="subtle"
-              size="sm"
-            />
-          </template>
+            <template #status-cell="{ row }">
+              <UBadge
+                :label="statusLabels[row.original.status]?.label || row.original.status"
+                :color="(statusLabels[row.original.status]?.color as any) || 'neutral'"
+                variant="subtle"
+                size="sm"
+              />
+            </template>
 
-          <template #createdAt-cell="{ row }">
-            <span class="text-sm text-muted">
-              {{ formatDate(row.original.createdAt) }}
-            </span>
-          </template>
-        </UTable>
+            <template #createdAt-cell="{ row }">
+              <span class="text-sm text-muted">
+                {{ formatDate(row.original.createdAt) }}
+              </span>
+            </template>
+          </UTable>
+        </div>
 
         <div
           v-else

@@ -15,7 +15,7 @@ const currencySymbol = computed(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-4 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
     <HomeStatCard
       icon="lucide:user"
       label="Клиенты"
