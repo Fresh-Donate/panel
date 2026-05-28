@@ -35,6 +35,7 @@ export interface ProductSummary {
 export interface StatsSummary {
   currency: string
   revenue: MetricSeries
+  commission: MetricSeries
   customers: MetricSeries
   avgOrder: MetricSeries
   payments: MetricSeries
