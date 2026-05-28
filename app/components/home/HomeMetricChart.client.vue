@@ -94,24 +94,22 @@ const template = (d: DataRecord) => `
 <template>
   <UCard
     ref="cardRef"
+    class="relative"
     :ui="{ root: 'overflow-visible', body: '!px-0 !pt-0 !pb-3' }"
   >
-    <template #header>
-      <div>
-        <p class="text-xs text-muted uppercase mb-1.5">
-          {{ title }}
-        </p>
-        <p class="text-3xl text-highlighted font-semibold">
-          {{ fmt(total) }}
-        </p>
-      </div>
-    </template>
-
+    <div class="absolute top-4 left-4">
+      <p class="text-xs text-muted uppercase mb-1.5">
+        {{ title }}
+      </p>
+      <p class="text-3xl text-highlighted font-semibold">
+        {{ fmt(total) }}
+      </p>
+    </div>
     <VisXYContainer
       v-if="data.length > 0"
       :data="data"
       :padding="{ top: 40 }"
-      class="h-96"
+      class="h-64 mt-8"
       :width="width"
     >
       <VisLine
@@ -129,6 +127,9 @@ const template = (d: DataRecord) => `
         type="x"
         :x="x"
         :tick-format="xTicks"
+        :grid-line="false"
+        :tick-line="false"
+        :domain-line="false"
       />
       <VisCrosshair
         :color="color"
