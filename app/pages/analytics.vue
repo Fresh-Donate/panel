@@ -218,7 +218,6 @@ const columns = [
       <UPageCard
         title="Последние покупки"
         :ui="{ body: '!p-0' }"
-        class="mt-6"
       >
         <UTable
           v-if="recentPayments.length > 0"
