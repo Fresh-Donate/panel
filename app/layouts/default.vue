@@ -93,6 +93,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Аналитика',
+  icon: 'i-lucide-chart-line',
+  to: '/analytics',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Товары',
   icon: 'i-lucide-package',
   to: '/products',
