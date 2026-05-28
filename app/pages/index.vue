@@ -173,7 +173,10 @@ const columns = [
     </template>
 
     <template #body>
-      <HomeStats />
+      <HomeStats
+        :range="range"
+        :currency="chartCurrency || undefined"
+      />
 
       <HomeChart
         :period="period"

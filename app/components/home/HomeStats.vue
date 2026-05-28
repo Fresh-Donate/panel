@@ -1,126 +1,78 @@
 <script setup lang="ts">
+import type { Range, StatsSummary } from '~/types'
+import HomeStatCard from '~/components/home/HomeStatCard.vue'
+
+const props = defineProps<{
+  range: Range
+  currency?: string
+}>()
+
 const config = useRuntimeConfig()
 const token = useCookie('auth_token')
 
-const currencySymbols: Record<string, string> = {
-  RUB: '₽',
-  USD: '$',
-  EUR: '€'
+const summary = ref<StatsSummary | null>(null)
+
+const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
+const currencySymbol = computed(() => {
+  const code = summary.value?.currency || 'RUB'
+  return currencySymbols[code] || code
+})
+
+async function loadSummary() {
+  const params: Record<string, string> = {
+    from: props.range.start.toISOString(),
+    to: props.range.end.toISOString()
+  }
+  if (props.currency) params.currency = props.currency
+
+  try {
+    summary.value = await $fetch<StatsSummary>('/stats/summary', {
+      baseURL: config.public.apiBase as string,
+      headers: { Authorization: `Bearer ${token.value}` },
+      params
+    })
+  } catch {
+    summary.value = null
+  }
 }
 
-interface RevenueByCurrency {
-  currency: string
-  total: number
-  commission: number
-  provider: number
-}
-
-interface StatsResponse {
-  revenueByCurrency: RevenueByCurrency[]
-  totalPayments: number
-  totalCustomers: number
-}
-
-const { data: apiStats } = await useAsyncData<StatsResponse>('dashboard-stats', () =>
-  $fetch<StatsResponse>('/stats', {
-    baseURL: config.public.apiBase as string,
-    headers: { Authorization: `Bearer ${token.value}` }
-  }),
-{ default: () => ({ revenueByCurrency: [], totalPayments: 0, totalCustomers: 0 }) }
-)
-
-function formatRevenue(items: RevenueByCurrency[]): string {
-  if (items.length === 0) return '0'
-  return items
-    .map(r => `${r.total.toLocaleString('ru-RU')}${currencySymbols[r.currency] || r.currency}`)
-    .join(' / ')
-}
-
-function formatCommission(items: RevenueByCurrency[]): string {
-  const withCommission = items.filter(r => r.commission > 0)
-  if (withCommission.length === 0) return '0'
-  return withCommission
-    .map(r => `${r.commission.toLocaleString('ru-RU')}${currencySymbols[r.currency] || r.currency}`)
-    .join(' / ')
-}
+watch([() => props.range, () => props.currency], loadSummary, { immediate: true })
 </script>
 
 <template>
-  <UPageGrid class="lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-px">
-    <UPageCard
-      icon="i-lucide-users"
-      title="Клиенты"
-      variant="subtle"
-      :ui="{
-        container: 'gap-y-1.5',
-        wrapper: 'items-start',
-        leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase'
-      }"
-      class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
-    >
-      <div class="flex items-center gap-2">
-        <span class="text-2xl font-semibold text-highlighted">
-          {{ apiStats.totalCustomers }}
-        </span>
-      </div>
-    </UPageCard>
+  <div class="grid grid-cols-4 gap-6">
+    <HomeStatCard
+      icon="lucide:user"
+      label="Клиенты"
+      :current="summary?.customers.current ?? 0"
+      :previous="summary?.customers.previous ?? 0"
+      :sparkline="summary?.customers.sparkline ?? []"
+    />
 
-    <UPageCard
-      icon="i-lucide-circle-dollar-sign"
-      title="Выручка"
-      variant="subtle"
-      :ui="{
-        container: 'gap-y-1.5',
-        wrapper: 'items-start',
-        leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase'
-      }"
-      class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
-    >
-      <div class="flex items-center gap-2">
-        <span class="text-2xl font-semibold text-highlighted">
-          {{ formatRevenue(apiStats.revenueByCurrency) }}
-        </span>
-      </div>
-    </UPageCard>
+    <HomeStatCard
+      icon="lucide:shopping-cart"
+      label="Платежей"
+      :current="summary?.payments.current ?? 0"
+      :previous="summary?.payments.previous ?? 0"
+      :sparkline="summary?.payments.sparkline ?? []"
+    />
 
-    <UPageCard
-      icon="i-lucide-percent"
-      title="Комиссии"
-      variant="subtle"
-      :ui="{
-        container: 'gap-y-1.5',
-        wrapper: 'items-start',
-        leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase'
-      }"
-      class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
-    >
-      <div class="flex items-center gap-2">
-        <span class="text-2xl font-semibold text-highlighted">
-          {{ formatCommission(apiStats.revenueByCurrency) }}
-        </span>
-      </div>
-    </UPageCard>
+    <HomeStatCard
+      icon="lucide:wallet"
+      label="Выручка"
+      :current="summary?.revenue.current ?? 0"
+      :previous="summary?.revenue.previous ?? 0"
+      :sparkline="summary?.revenue.sparkline ?? []"
+      :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+    />
 
-    <UPageCard
-      icon="i-lucide-shopping-cart"
-      title="Платежей"
-      variant="subtle"
-      :ui="{
-        container: 'gap-y-1.5',
-        wrapper: 'items-start',
-        leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
-        title: 'font-normal text-muted text-xs uppercase'
-      }"
-      class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
-    >
-      <div class="flex items-center gap-2">
-        <span class="text-2xl font-semibold text-highlighted">
-          {{ apiStats.totalPayments }}
-        </span>
-      </div>
-    </UPageCard>
-  </UPageGrid>
+    <HomeStatCard
+      icon="lucide:receipt"
+      label="Средний чек"
+      :current="summary?.avgOrder.current ?? 0"
+      :previous="summary?.avgOrder.previous ?? 0"
+      :sparkline="summary?.avgOrder.sparkline ?? []"
+      :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+    />
+  </div>
 </template>
