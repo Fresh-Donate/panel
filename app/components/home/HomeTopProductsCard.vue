@@ -70,7 +70,7 @@ function formatAmount(n: number): string {
 
     <div
       v-if="items.length > 0"
-      class="flex flex-col gap-3"
+      class="flex flex-col gap-2"
     >
       <div
         v-for="item in items"
@@ -100,7 +100,7 @@ function formatAmount(n: number): string {
 
     <div
       v-else
-      class="h-48 flex items-center justify-center"
+      class="h-40 flex items-center justify-center"
     >
       <p class="text-sm text-muted">
         Нет данных за выбранный период

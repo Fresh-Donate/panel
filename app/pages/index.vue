@@ -209,6 +209,10 @@ const columns = [
           :range="range"
           :currency="chartCurrency || undefined"
         />
+        <HomeTopCustomersCard
+          :range="range"
+          :currency="chartCurrency || undefined"
+        />
       </div>
 
       <!-- Recent Payments -->

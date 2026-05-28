@@ -73,15 +73,15 @@ function formatAmount(n: number): string {
       v-if="items.length > 0"
       class="flex items-center gap-8"
     >
-      <div class="relative size-48 shrink-0">
+      <div class="relative size-40 shrink-0">
         <VisSingleContainer
           :data="items"
-          :height="192"
+          :height="160"
         >
           <VisDonut
             :value="donutValue"
             :color="donutColor"
-            :arc-width="16"
+            :arc-width="14"
             :pad-angle="0.02"
             :corner-radius="2"
           />
@@ -113,7 +113,7 @@ function formatAmount(n: number): string {
 
     <div
       v-else
-      class="h-48 flex items-center justify-center"
+      class="h-40 flex items-center justify-center"
     >
       <p class="text-sm text-muted">
         Нет данных за выбранный период
