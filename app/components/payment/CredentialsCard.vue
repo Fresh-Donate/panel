@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { PaymentProvider } from '~/types'
 
+const config = useRuntimeConfig()
+
+const url = config.public.apiBase
+
 const props = defineProps<{
   provider: PaymentProvider
 }>()
@@ -26,6 +30,13 @@ const credentialLabels: Record<string, Record<string, { label: string, placehold
     privateKey: { label: 'Private Key', placeholder: 'Приватный ключ из настроек Tebex' },
     webhookSecret: { label: 'Webhook Secret', placeholder: 'Секрет для подписи webhook (Developers → Webhooks → Endpoints)' }
   }
+}
+
+const webhookUrls: Record<string, string> = {
+  yookassa: `В панели ЮКасса перейдите в свой магазин → Интеграция → HTTP-уведомления → Изменить настройки → укажите URL для уведомлений: ${url}/webhooks/yookassa`,
+  heleket: `При создании мерчанта Heleket укажите ${url}/webhooks/heleket`,
+  wata: `В терминале WATA укажите webhook ${url}/webhooks/wata`,
+  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`
 }
 
 function getLabel(key: string): string {
@@ -61,6 +72,13 @@ function isSecret(key: string): boolean {
           @update:model-value="emit('update:credential', key as string, $event as string)"
         />
       </UFormField>
+      <UAlert
+        icon="i-lucide-info"
+        color="info"
+        variant="subtle"
+        title="Добавьте webhook"
+        :description="webhookUrls[provider.providerId]"
+      />
     </div>
   </UPageCard>
 </template>
