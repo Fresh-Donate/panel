@@ -1,16 +1,55 @@
 <script setup lang="ts">
 import { sub } from 'date-fns'
+import { CalendarDate, getLocalTimeZone } from '@internationalized/date'
 import type { Period, Range } from '~/types'
 
 const config = useRuntimeConfig()
 const token = useCookie('auth_token')
 
+type RangePreset = '7d' | '30d' | '90d' | 'custom'
+
+const activePreset = ref<RangePreset>('7d')
 const range = shallowRef<Range>({
-  start: sub(new Date(), { days: 14 }),
+  start: sub(new Date(), { days: 7 }),
   end: new Date()
 })
 const period = ref<Period>('daily')
 const chartCurrency = ref('')
+
+const rangePresets: { label: string, value: RangePreset, days?: number }[] = [
+  { label: '7 дней', value: '7d', days: 7 },
+  { label: '30 дней', value: '30d', days: 30 },
+  { label: '90 дней', value: '90d', days: 90 },
+  { label: 'Свой', value: 'custom' }
+]
+
+function toCalendarDate(d: Date): CalendarDate {
+  return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate())
+}
+
+const customRange = shallowRef({
+  start: toCalendarDate(sub(new Date(), { days: 7 })),
+  end: toCalendarDate(new Date())
+})
+
+watch(customRange, (val) => {
+  if (!val?.start || !val?.end) return
+  const tz = getLocalTimeZone()
+  const start = val.start.toDate(tz)
+  const end = val.end.toDate(tz)
+  end.setHours(23, 59, 59, 999)
+  range.value = { start, end }
+  activePreset.value = 'custom'
+})
+
+function applyPreset(preset: typeof rangePresets[number]) {
+  if (preset.value === 'custom') return
+  activePreset.value = preset.value
+  range.value = {
+    start: sub(new Date(), { days: preset.days! }),
+    end: new Date()
+  }
+}
 
 const currencyOptions = [
   { label: 'Все', value: '' },
@@ -81,8 +120,43 @@ const columns = [
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
-          <div>
-            <div class="flex items-center gap-2">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1">
+              <template
+                v-for="preset in rangePresets"
+                :key="preset.value"
+              >
+                <UPopover v-if="preset.value === 'custom'">
+                  <UButton
+                    :label="preset.label"
+                    :variant="activePreset === preset.value ? 'soft' : 'ghost'"
+                    :color="activePreset === preset.value ? 'primary' : 'neutral'"
+                    size="xs"
+                    icon="i-lucide-calendar"
+                  />
+                  <template #content>
+                    <UCalendar
+                      v-model="customRange"
+                      range
+                      :number-of-months="2"
+                      class="p-2"
+                    />
+                  </template>
+                </UPopover>
+                <UButton
+                  v-else
+                  :label="preset.label"
+                  :variant="activePreset === preset.value ? 'soft' : 'ghost'"
+                  :color="activePreset === preset.value ? 'primary' : 'neutral'"
+                  size="xs"
+                  @click="applyPreset(preset)"
+                />
+              </template>
+            </div>
+
+            <div class="h-5 w-px bg-default" />
+
+            <div class="flex items-center gap-1">
               <UButton
                 v-for="opt in currencyOptions"
                 :key="opt.value"
