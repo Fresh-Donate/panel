@@ -23,7 +23,7 @@ function formatAmount(n: number): string {
 
 <template>
   <UCard>
-    <div class="grid grid-cols-8 gap-4 text-xs text-muted uppercase font-normal text-left mb-2">
+    <div class="grid grid-cols-5 lg:grid-cols-8 gap-4 text-xs text-muted uppercase font-normal text-left mb-2">
       <p>
         #
       </p>
@@ -33,20 +33,19 @@ function formatAmount(n: number): string {
       <p class="col-span-2 text-right">
         Выручка
       </p>
-      <p class="col-span-2 text-center">
+      <p class="col-span-2 text-center hidden lg:block">
         %
       </p>
-      <p />
     </div>
 
     <div
       v-if="items.length > 0"
-      class="flex flex-col gap-2"
+      class="flex flex-col gap-2 w-full"
     >
       <div
         v-for="item in items"
         :key="item.productId"
-        class="grid grid-cols-8 items-center gap-4"
+        class="grid grid-cols-5 lg:grid-cols-8 items-center gap-4"
       >
         <span class="text-sm text-muted tabular-nums">
           {{ item.position }}
@@ -57,13 +56,13 @@ function formatAmount(n: number): string {
         <span class="text-sm font-medium text-highlighted tabular-nums text-right col-span-2">
           {{ formatAmount(item.amount) }}
         </span>
-        <div class="h-2 w-full col-span-2">
+        <div class="h-2 w-full col-span-2 hidden lg:block">
           <div
             class="h-full bg-primary rounded-full"
             :style="{ width: `${item.barWidth}%` }"
           />
         </div>
-        <span class="text-sm text-muted tabular-nums text-right">
+        <span class="text-sm text-muted tabular-nums text-right hidden lg:block">
           {{ item.pct }}%
         </span>
       </div>

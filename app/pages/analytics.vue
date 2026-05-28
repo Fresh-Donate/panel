@@ -138,7 +138,7 @@ const columns = [
               >
                 <UPopover v-if="preset.value === 'custom'">
                   <UButton
-                    :label="preset.label"
+                    :label="$device.isMobile ? undefined : preset.label"
                     :variant="activePreset === preset.value ? 'soft' : 'ghost'"
                     :color="activePreset === preset.value ? 'primary' : 'neutral'"
                     size="xs"
@@ -155,7 +155,7 @@ const columns = [
                 </UPopover>
                 <UButton
                   v-else
-                  :label="preset.label"
+                  :label="$device.isMobile ? `${preset.days}` : preset.label"
                   :variant="activePreset === preset.value ? 'soft' : 'ghost'"
                   :color="activePreset === preset.value ? 'primary' : 'neutral'"
                   size="xs"
@@ -164,13 +164,13 @@ const columns = [
               </template>
             </div>
 
-            <div class="h-5 w-px bg-default" />
+            <div class="h-5 w-px bg-default hidden lg:block" />
 
             <div class="flex items-center gap-1">
               <UButton
                 v-for="opt in currencyOptions"
                 :key="opt.value"
-                :label="opt.label"
+                :label="$device.isMobile ? opt.label.charAt(0) : opt.label"
                 :variant="chartCurrency === opt.value ? 'soft' : 'ghost'"
                 :color="chartCurrency === opt.value ? 'primary' : 'neutral'"
                 size="xs"

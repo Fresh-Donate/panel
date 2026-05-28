@@ -43,7 +43,7 @@ function formatAmount(n: number): string {
   <UCard>
     <div
       v-if="items.length > 0"
-      class="flex items-center gap-8"
+      class="flex flex-col lg:flex-row items-center gap-8"
     >
       <div class="relative size-40 shrink-0">
         <VisSingleContainer
