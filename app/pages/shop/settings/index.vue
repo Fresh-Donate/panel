@@ -249,20 +249,7 @@ async function onSubmit() {
           <UFormField
             label="Адрес магазина"
             name="shopUrl"
-            description="Публичный URL фронтенда магазина — используется для canonical-ссылок, Open Graph, sitemap.xml и кнопок "
-            открыть
-            магазин".
-            без
-            слэша
-            в
-            конце.
-            если
-            оставить
-            пустым,
-            будет
-            использован
-            адрес
-            запроса."
+            description="Публичный URL фронтенда магазина — используется для canonical-ссылок, Open Graph, sitemap.xml и кнопок «открыть магазин». Без слэша в конце. Если оставить пустым, будет использован адрес запроса."
           >
             <UInput
               v-model="state.shopUrl"
