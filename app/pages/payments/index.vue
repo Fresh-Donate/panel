@@ -206,7 +206,7 @@ const columns = [
       <!-- Loading -->
       <div
         v-if="fetching"
-        class="flex items-center justify-center py-12"
+        class="flex items-center justify-center py-12 h-[960px]"
       >
         <UIcon
           name="i-lucide-loader-circle"
@@ -219,6 +219,7 @@ const columns = [
         v-else-if="payments.length > 0"
         :columns="columns"
         :data="payments"
+        class="h-[960px]"
       >
         <template #productName-cell="{ row }">
           <span class="font-medium">{{ row.original.productName }}</span>
@@ -265,7 +266,7 @@ const columns = [
       <!-- Empty -->
       <div
         v-else
-        class="text-center py-16"
+        class="text-center py-16 h-[960px]"
       >
         <UIcon
           name="i-lucide-receipt"
@@ -282,7 +283,7 @@ const columns = [
         class="flex justify-center mt-6"
       >
         <UPagination
-          v-model="page"
+          v-model:page="page"
           :total="total"
           :items-per-page="pageSize"
         />

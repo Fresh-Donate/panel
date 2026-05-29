@@ -2,33 +2,25 @@
 import { sub } from 'date-fns'
 import type { Period, Range } from '~/types'
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-
 const range = shallowRef<Range>({
-  start: sub(new Date(), { days: 14 }),
+  start: sub(new Date(), { hours: 24 }),
   end: new Date()
 })
-const period = ref<Period>('daily')
-const chartCurrency = ref('')
+const period: Period = 'hourly'
 
-const currencyOptions = [
-  { label: 'Все', value: '' },
-  { label: '₽ RUB', value: 'RUB' },
-  { label: '$ USD', value: 'USD' },
-  { label: '€ EUR', value: 'EUR' }
-]
+const { summary, load: loadSummary } = useStatsSummary()
+watch(
+  range,
+  () => loadSummary(range.value.start, range.value.end),
+  { immediate: true }
+)
 
-interface RecentPayment {
-  id: string
-  customerNickname?: string
-  customerEmail?: string
-  productName: string
-  totalAmount: number
-  currency: string
-  status: string
-  createdAt: string
+const weekRange = {
+  start: sub(new Date(), { weeks: 1 }),
+  end: new Date()
 }
+const { load: loadWeekSummary } = useStatsSummary('stats-summary-week')
+onMounted(() => loadWeekSummary(weekRange.start, weekRange.end))
 
 const currencySymbols: Record<string, string> = {
   RUB: '₽',
@@ -36,40 +28,27 @@ const currencySymbols: Record<string, string> = {
   EUR: '€'
 }
 
-const statusLabels: Record<string, { label: string, color: string }> = {
-  pending: { label: 'Ожидает', color: 'warning' },
-  paid: { label: 'Оплачен', color: 'info' },
-  delivered: { label: 'Выполнен', color: 'success' },
-  failed: { label: 'Ошибка', color: 'error' },
-  refunded: { label: 'Возврат', color: 'neutral' }
+const currencySymbol = computed(() => {
+  const code = summary.value?.currency || 'RUB'
+  return currencySymbols[code] || code
+})
+
+interface QuickAction {
+  to: string
+  icon: string
+  title: string
+  description: string
 }
 
-const { data: statsData } = await useAsyncData('dashboard-stats-full', () =>
-  $fetch<{ recentPayments: RecentPayment[] }>('/stats', {
-    baseURL: config.public.apiBase as string,
-    headers: { Authorization: `Bearer ${token.value}` }
-  }),
-{ default: () => ({ recentPayments: [] }) }
-)
-
-const recentPayments = computed(() => statsData.value.recentPayments || [])
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const columns = [
-  { accessorKey: 'productName', header: 'Товар' },
-  { accessorKey: 'customer', header: 'Покупатель' },
-  { accessorKey: 'totalAmount', header: 'Сумма' },
-  { accessorKey: 'status', header: 'Статус' },
-  { accessorKey: 'createdAt', header: 'Дата' }
+const quickActions: QuickAction[] = [
+  { to: '/products', icon: 'lucide:package', title: 'Товары', description: 'Создать или изменить' },
+  { to: '/promotions', icon: 'lucide:tag', title: 'Акции', description: 'Скидки и промо' },
+  { to: '/payments', icon: 'lucide:receipt', title: 'Платежи', description: 'История покупок' },
+  { to: '/customers', icon: 'lucide:users', title: 'Клиенты', description: 'База игроков' },
+  { to: '/settings', icon: 'lucide:cog', title: 'Настройки', description: 'Изменить настройки FreshDonate' },
+  { to: '/shop/settings', icon: 'lucide:store', title: 'Настройки магазина', description: 'Управление страницей магазина' },
+  { to: '/analytics', icon: 'lucide:chart-spline', title: 'Аналитика', description: 'Статистика по периодам' },
+  { to: '/groups', icon: 'lucide:layers', title: 'Группы', description: 'Создать или изменить' }
 ]
 </script>
 
@@ -84,102 +63,61 @@ const columns = [
     </template>
 
     <template #body>
-      <HomeStats />
+      <HomeStats state-key="stats-summary-week" />
 
-      <div class="flex items-center gap-2 mt-6 mb-2">
-        <UButton
-          v-for="opt in currencyOptions"
-          :key="opt.value"
-          :label="opt.label"
-          :variant="chartCurrency === opt.value ? 'soft' : 'ghost'"
-          :color="chartCurrency === opt.value ? 'primary' : 'neutral'"
-          size="xs"
-          @click="chartCurrency = opt.value"
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HomeMetricChart
+          title="Выручка за день"
+          metric="amount"
+          :period="period"
+          :range="range"
+          :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+        />
+        <HomeMetricChart
+          title="Покупки за день"
+          metric="count"
+          :period="period"
+          :range="range"
+          :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
+          color="var(--ui-success)"
         />
       </div>
 
-      <HomeChart
-        :period="period"
-        :range="range"
-        :currency="chartCurrency || undefined"
-      />
-
-      <!-- Recent Payments -->
-      <UPageCard
-        title="Последние покупки"
-        :ui="{ body: '!p-0' }"
-        class="mt-6"
-      >
-        <UTable
-          v-if="recentPayments.length > 0"
-          :columns="columns"
-          :data="recentPayments"
-        >
-          <template #productName-cell="{ row }">
-            <span class="font-medium">{{ row.original.productName }}</span>
-          </template>
-
-          <template #customer-cell="{ row }">
-            <div>
-              <p class="font-medium">
-                {{ row.original.customerNickname || '—' }}
-              </p>
-              <p class="text-xs text-muted">
-                {{ row.original.customerEmail || '' }}
-              </p>
-            </div>
-          </template>
-
-          <template #totalAmount-cell="{ row }">
-            <span class="font-semibold">
-              {{ Number(row.original.totalAmount).toLocaleString() }}{{ currencySymbols[row.original.currency] || row.original.currency }}
-            </span>
-          </template>
-
-          <template #status-cell="{ row }">
-            <UBadge
-              :label="statusLabels[row.original.status]?.label || row.original.status"
-              :color="(statusLabels[row.original.status]?.color as any) || 'neutral'"
+      <div>
+        <p class="text-xs text-muted uppercase tracking-wider mb-3">
+          Быстрые действия
+        </p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <NuxtLink
+            v-for="action in quickActions"
+            :key="action.to"
+            :to="action.to"
+            class="block"
+          >
+            <UCard
               variant="subtle"
-              size="sm"
-            />
-          </template>
-
-          <template #createdAt-cell="{ row }">
-            <span class="text-sm text-muted">
-              {{ formatDate(row.original.createdAt) }}
-            </span>
-          </template>
-        </UTable>
-
-        <div
-          v-else
-          class="text-center py-10"
-        >
-          <UIcon
-            name="i-lucide-receipt"
-            class="size-12 text-muted/20 mx-auto"
-          />
-          <p class="mt-3 text-sm text-muted">
-            Покупок пока нет
-          </p>
+              class="cursor-pointer hover:bg-elevated transition h-full"
+            >
+              <div class="flex flex-col gap-3">
+                <div class="w-8 h-8 flex justify-center items-center rounded-lg bg-primary/10 ring ring-inset ring-primary/25">
+                  <Icon
+                    :name="action.icon"
+                    class="text-xl text-primary"
+                  />
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-highlighted">
+                    {{ action.title }}
+                  </p>
+                  <p class="text-xs text-muted mt-0.5">
+                    {{ action.description }}
+                  </p>
+                </div>
+              </div>
+            </UCard>
+          </NuxtLink>
         </div>
-
-        <template
-          v-if="recentPayments.length > 0"
-          #footer
-        >
-          <div class="text-center">
-            <UButton
-              to="/payments"
-              label="Все платежи"
-              variant="ghost"
-              trailing-icon="i-lucide-arrow-right"
-              size="sm"
-            />
-          </div>
-        </template>
-      </UPageCard>
+      </div>
     </template>
   </UDashboardPanel>
 </template>

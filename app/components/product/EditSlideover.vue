@@ -27,6 +27,7 @@ const schema = z.object({
   type: z.string().min(1, 'Выберите тип'),
   commands: z.string().optional(),
   allowCustomCount: z.boolean(),
+  forceDelivery: z.boolean(),
   imageUrl: z.string().max(512, 'Слишком длинная ссылка').optional()
 })
 
@@ -41,6 +42,7 @@ const state = reactive<FormState>({
   type: 'item',
   commands: '',
   allowCustomCount: false,
+  forceDelivery: false,
   imageUrl: ''
 })
 
@@ -54,13 +56,11 @@ watch(() => props.product, (p) => {
     state.type = p.type
     state.commands = p.commands?.join('\n') || ''
     state.allowCustomCount = p.allowCustomCount || false
+    state.forceDelivery = p.forceDelivery || false
     state.imageUrl = p.imageUrl || ''
   }
 }, { immediate: true })
 
-// Privilege = rank-style: count is always 1, allowCustomCount is forced
-// off, the form hides both fields, and the backend still receives 1 so
-// schema validation passes.
 watch(() => state.type, (t) => {
   if (t === 'privilege') state.quantity = 1
 })
@@ -109,6 +109,7 @@ async function onSubmit() {
         type: state.type,
         commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
         allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
+        forceDelivery: state.forceDelivery,
         imageUrl: state.imageUrl || ''
       }
     })
@@ -116,7 +117,7 @@ async function onSubmit() {
     emit('updated', updated)
     toast.add({
       title: 'Товар обновлён',
-      description: `«${updated.name}» успешно сохранён.`,
+      description: `"${updated.name}" успешно сохранён.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })
@@ -227,6 +228,18 @@ async function onSubmit() {
         >
           <USwitch
             v-model="state.allowCustomCount"
+            class="w-full max-w-xs"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Выдавать принудительно"
+          name="forceDelivery"
+          description="Выдача произойдёт даже если игрока нет на сервере."
+          required
+        >
+          <USwitch
+            v-model="state.forceDelivery"
             class="w-full max-w-xs"
           />
         </UFormField>

@@ -157,7 +157,7 @@ async function onCreate() {
     showCreate.value = false
     toast.add({
       title: 'Метод добавлен',
-      description: `«${created.name}» успешно создан.`,
+      description: `"${created.name}" успешно создан.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })
@@ -188,7 +188,7 @@ async function onEdit() {
     showEdit.value = false
     toast.add({
       title: 'Метод обновлён',
-      description: `«${updated.name}» успешно сохранён.`,
+      description: `"${updated.name}" успешно сохранён.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })
@@ -234,7 +234,7 @@ async function deleteOption(option: PaymentOptionItem) {
     options.value = options.value.filter(o => o.id !== option.id)
     toast.add({
       title: 'Метод удалён',
-      description: `«${option.name}» удалён.`,
+      description: `"${option.name}" удалён.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })

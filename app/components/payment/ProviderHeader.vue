@@ -13,7 +13,7 @@ const emit = defineEmits<{
 }>()
 
 // Providers that support a dedicated test / sandbox environment.
-const PROVIDERS_WITH_SANDBOX = ['wata']
+const PROVIDERS_WITH_SANDBOX = ['wata', 'cryptobot']
 const supportsTestMode = computed(() =>
   PROVIDERS_WITH_SANDBOX.includes(props.provider.providerId)
 )

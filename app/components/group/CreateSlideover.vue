@@ -63,7 +63,7 @@ async function onSubmit() {
     emit('created', group)
     toast.add({
       title: 'Группа создана',
-      description: `«${group.name}» добавлена.`,
+      description: `"${group.name}" добавлена.`,
       icon: 'i-lucide-check-circle',
       color: 'success'
     })
