@@ -40,7 +40,8 @@ const webhookUrls: Record<string, string> = {
   heleket: `При создании мерчанта Heleket укажите ${url}/webhooks/heleket`,
   cryptobot: `В @CryptoBot → Crypto Pay → My Apps → ваше приложение → Webhooks включите вебхуки и укажите URL ${url}/webhooks/cryptobot`,
   wata: `В терминале WATA укажите webhook ${url}/webhooks/wata`,
-  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`
+  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`,
+  cryptobot: `В @Cryptobot укажите webhook ${url}/webhooks/cryptobot`
 }
 
 function getLabel(key: string): string {
