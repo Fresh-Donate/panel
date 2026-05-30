@@ -35,6 +35,7 @@ interface PaymentItem {
     demo?: boolean
     deliveryLogs?: DeliveryLog[]
     previousDeliveryLogs?: DeliveryLog[]
+    confirmationEmailSentAt?: string
   }
   externalPaymentUrl: string | null
   createdAt: string
@@ -56,6 +57,7 @@ const pageSize = 20
 
 const selected = ref<PaymentItem | null>(null)
 const retrying = ref(false)
+const resendingReceipt = ref(false)
 
 const currencySymbols: Record<string, string> = {
   RUB: '₽',
@@ -160,6 +162,31 @@ async function retryDelivery() {
 const deliveryLogs = computed<DeliveryLog[]>(() => selected.value?.meta?.deliveryLogs || [])
 const previousLogs = computed<DeliveryLog[]>(() => selected.value?.meta?.previousDeliveryLogs || [])
 const canRetry = computed(() => selected.value && ['paid', 'failed'].includes(selected.value.status))
+const canResendReceipt = computed(() =>
+  !!selected.value
+  && !!selected.value.customerEmail
+  && ['paid', 'delivered'].includes(selected.value.status)
+  && !selected.value.meta?.demo
+)
+
+async function resendReceipt() {
+  if (!selected.value) return
+  resendingReceipt.value = true
+  try {
+    await $fetch<{ ok: boolean }>(`/payments/${selected.value.id}/resend-receipt`, {
+      method: 'POST',
+      baseURL: config.public.apiBase as string,
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    toast.add({ title: 'Чек отправлен повторно', description: selected.value.customerEmail, icon: 'i-lucide-mail-check', color: 'success' })
+    selectPayment(selected.value.id)
+  } catch (err: any) {
+    const message = err?.data?.error || 'Не удалось отправить чек.'
+    toast.add({ title: 'Ошибка', description: message, icon: 'i-lucide-alert-circle', color: 'error' })
+  } finally {
+    resendingReceipt.value = false
+  }
+}
 
 const columns = [
   { accessorKey: 'productName', header: 'Товар' },
@@ -460,6 +487,29 @@ const columns = [
           :loading="retrying"
           @click="retryDelivery"
         />
+
+        <!-- Resend receipt -->
+        <div
+          v-if="selected.customerEmail"
+          class="space-y-2"
+        >
+          <UButton
+            icon="i-lucide-mail"
+            :label="selected.meta?.confirmationEmailSentAt ? 'Отправить чек ещё раз' : 'Отправить чек'"
+            color="primary"
+            variant="soft"
+            block
+            :loading="resendingReceipt"
+            :disabled="!canResendReceipt"
+            @click="resendReceipt"
+          />
+          <p
+            v-if="selected.meta?.confirmationEmailSentAt"
+            class="text-[11px] text-muted text-center"
+          >
+            Чек отправлен {{ formatDateFull(selected.meta.confirmationEmailSentAt) }}
+          </p>
+        </div>
 
         <!-- Delivery logs -->
         <div v-if="deliveryLogs.length > 0">
