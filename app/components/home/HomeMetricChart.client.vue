@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachHourOfInterval, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfHour, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
+import { eachHourOfInterval, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, isSameDay, startOfHour, startOfDay, startOfWeek, startOfMonth } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -13,6 +13,7 @@ const props = defineProps<{
   currency?: string
   formatter?: (n: number) => string
   color?: string
+  summaryMode?: 'sum' | 'today'
 }>()
 
 const config = useRuntimeConfig()
@@ -72,7 +73,13 @@ function normalizeKey(date: Date): string {
 const x = (_: DataRecord, i: number) => i
 const y = (d: DataRecord) => d.value
 
-const total = computed(() => data.value.reduce((acc, { value }) => acc + value, 0))
+const total = computed(() => {
+  if (props.summaryMode === 'today') {
+    const today = data.value.find(d => isSameDay(d.date, new Date()))
+    return today?.value ?? 0
+  }
+  return data.value.reduce((acc, { value }) => acc + value, 0)
+})
 const fmt = computed(() => props.formatter || ((n: number) => n.toLocaleString('ru-RU')))
 const color = computed(() => props.color || 'var(--ui-primary)')
 

@@ -27,7 +27,7 @@ const currencySymbol = computed(() => {
 
     <HomeStatCard
       icon="lucide:shopping-cart"
-      label="Платежей (Неделя)"
+      label="Покупок (Неделя)"
       :current="summary?.payments?.current ?? 0"
       :previous="summary?.payments?.previous ?? 0"
       :sparkline="summary?.payments?.sparkline ?? []"

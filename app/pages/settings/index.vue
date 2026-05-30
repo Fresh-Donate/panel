@@ -24,6 +24,22 @@ const DEFAULT_RATES_BY_BASE: Record<SupportedCurrency, Record<string, number>> =
   EUR: { RUB: 0.01, USD: 0.95 }
 }
 
+interface SmtpConfig {
+  enabled: boolean
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  password: string
+  fromEmail: string
+  fromName: string
+}
+
+interface ReceiptTemplate {
+  subject: string
+  html: string
+}
+
 interface SettingsData {
   demo_payments: boolean
   delivery_method: DeliveryMethod
@@ -33,6 +49,8 @@ interface SettingsData {
   currency_rates: Record<string, number>
   telemetry_enabled: boolean
   installation_id: string
+  smtp_config: SmtpConfig
+  receipt_template: ReceiptTemplate
 }
 
 const state = reactive({
@@ -77,6 +95,40 @@ const loading = ref(false)
 const deliveryLoading = ref(false)
 const fetching = ref(true)
 
+const smtpState = reactive<SmtpConfig>({
+  enabled: false,
+  host: '',
+  port: 465,
+  secure: true,
+  user: '',
+  password: '',
+  fromEmail: '',
+  fromName: ''
+})
+const smtpLoading = ref(false)
+const smtpTestLoading = ref(false)
+const smtpTestEmail = ref('')
+
+const receiptState = reactive<ReceiptTemplate>({
+  subject: '',
+  html: ''
+})
+const receiptLoading = ref(false)
+const receiptPreviewOpen = ref(false)
+const receiptPreviewHtml = ref('')
+const receiptPreviewSubject = ref('')
+const receiptPreviewLoading = ref(false)
+
+interface PlaceholderItem { key: string, description: string }
+const placeholders = ref<PlaceholderItem[]>([])
+
+const smtpPortPresets = [
+  { label: '465 (SSL)', value: 465 },
+  { label: '587 (STARTTLS)', value: 587 },
+  { label: '25', value: 25 },
+  { label: '2525', value: 2525 }
+]
+
 async function fetchSettings() {
   fetching.value = true
   try {
@@ -95,6 +147,9 @@ async function fetchSettings() {
     pluginState.token = data.plugin_config?.token || ''
     baseCurrency.value = data.base_currency || 'RUB'
     rates.value = { ...data.currency_rates }
+    Object.assign(smtpState, data.smtp_config)
+    receiptState.subject = data.receipt_template?.subject || ''
+    receiptState.html = data.receipt_template?.html || ''
   } catch {
     toast.add({
       title: 'Ошибка загрузки',
@@ -107,7 +162,22 @@ async function fetchSettings() {
   }
 }
 
-onMounted(fetchSettings)
+async function fetchPlaceholders() {
+  try {
+    const data = await $fetch<{ placeholders: PlaceholderItem[] }>('/settings/receipt/placeholders', {
+      baseURL: config.public.apiBase as string,
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    placeholders.value = data.placeholders
+  } catch {
+    // Silent — placeholder reference is a nice-to-have, not critical.
+  }
+}
+
+onMounted(() => {
+  fetchSettings()
+  fetchPlaceholders()
+})
 
 async function onSubmitGeneral() {
   loading.value = true
@@ -220,6 +290,95 @@ function regenerateToken() {
     result += chars[Math.floor(Math.random() * chars.length)]
   }
   pluginState.token = result
+}
+
+async function saveSmtp() {
+  smtpLoading.value = true
+  try {
+    const data = await $fetch<SettingsData>('/settings', {
+      baseURL: config.public.apiBase as string,
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { smtp_config: { ...smtpState } }
+    })
+    Object.assign(smtpState, data.smtp_config)
+    toast.add({ title: 'SMTP-настройки сохранены', icon: 'i-lucide-check-circle', color: 'success' })
+  } catch {
+    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить настройки SMTP.', icon: 'i-lucide-alert-circle', color: 'error' })
+  } finally {
+    smtpLoading.value = false
+  }
+}
+
+async function sendTestEmail() {
+  if (!smtpTestEmail.value) {
+    toast.add({ title: 'Укажите адрес', description: 'Введите email для тестового письма.', color: 'warning' })
+    return
+  }
+  smtpTestLoading.value = true
+  try {
+    await $fetch<{ ok: boolean }>('/settings/smtp/test', {
+      baseURL: config.public.apiBase as string,
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { to: smtpTestEmail.value }
+    })
+    toast.add({ title: 'Тестовое письмо отправлено', description: `Проверьте ${smtpTestEmail.value}.`, icon: 'i-lucide-check-circle', color: 'success' })
+  } catch (err: any) {
+    const message = err?.data?.error || 'Не удалось отправить.'
+    toast.add({ title: 'Ошибка SMTP', description: message, icon: 'i-lucide-alert-circle', color: 'error' })
+  } finally {
+    smtpTestLoading.value = false
+  }
+}
+
+async function saveReceiptTemplate() {
+  receiptLoading.value = true
+  try {
+    const data = await $fetch<SettingsData>('/settings', {
+      baseURL: config.public.apiBase as string,
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { receipt_template: { subject: receiptState.subject, html: receiptState.html } }
+    })
+    receiptState.subject = data.receipt_template.subject
+    receiptState.html = data.receipt_template.html
+    toast.add({ title: 'Шаблон чека сохранён', icon: 'i-lucide-check-circle', color: 'success' })
+  } catch {
+    toast.add({ title: 'Ошибка', description: 'Не удалось сохранить шаблон.', icon: 'i-lucide-alert-circle', color: 'error' })
+  } finally {
+    receiptLoading.value = false
+  }
+}
+
+async function openReceiptPreview() {
+  receiptPreviewLoading.value = true
+  receiptPreviewOpen.value = true
+  try {
+    const data = await $fetch<{ subject: string, html: string }>('/settings/receipt/preview', {
+      baseURL: config.public.apiBase as string,
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: { template: { subject: receiptState.subject, html: receiptState.html } }
+    })
+    receiptPreviewSubject.value = data.subject
+    receiptPreviewHtml.value = data.html
+  } catch {
+    toast.add({ title: 'Ошибка', description: 'Не удалось построить превью.', color: 'error' })
+    receiptPreviewOpen.value = false
+  } finally {
+    receiptPreviewLoading.value = false
+  }
+}
+
+async function copyPlaceholder(key: string) {
+  const placeholder = `{${key}}`
+  try {
+    await navigator.clipboard.writeText(placeholder)
+    toast.add({ title: 'Скопировано', description: placeholder, icon: 'i-lucide-clipboard-check', color: 'success' })
+  } catch {
+    toast.add({ title: 'Не удалось скопировать', color: 'error' })
+  }
 }
 </script>
 
@@ -580,7 +739,261 @@ function regenerateToken() {
             </div>
           </div>
         </UPageCard>
+
+        <!-- SMTP -->
+        <UPageCard
+          title="Отправка писем (SMTP)"
+          description="Подтверждения покупок отправляются покупателям на email. Подключите свой почтовый ящик (Яндекс, Mail.ru, Timeweb и т.п.) — настройки SMTP подскажет ваш провайдер."
+        >
+          <div class="space-y-4">
+            <UFormField
+              label="Включить отправку"
+              name="smtp_enabled"
+              description="Если выключено, чеки не отправляются ни автоматически, ни вручную."
+            >
+              <USwitch v-model="smtpState.enabled" />
+            </UFormField>
+
+            <USeparator />
+
+            <div class="grid grid-cols-3 gap-3">
+              <UFormField
+                label="SMTP-хост"
+                class="col-span-2"
+              >
+                <UInput
+                  v-model="smtpState.host"
+                  placeholder="smtp.timeweb.ru"
+                  icon="i-lucide-server"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField label="Порт">
+                <UInput
+                  v-model.number="smtpState.port"
+                  type="number"
+                  placeholder="465"
+                  class="w-full"
+                />
+                <template #help>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    <button
+                      v-for="preset in smtpPortPresets"
+                      :key="preset.value"
+                      type="button"
+                      class="text-[10px] px-1.5 py-0.5 rounded bg-elevated hover:bg-muted/20 text-muted cursor-pointer"
+                      @click="smtpState.port = preset.value; smtpState.secure = preset.value === 465"
+                    >
+                      {{ preset.label }}
+                    </button>
+                  </div>
+                </template>
+              </UFormField>
+            </div>
+
+            <UFormField
+              label="Защищённое соединение (SSL/TLS)"
+              description="Включено для порта 465. Для 587 (STARTTLS) — выключено."
+            >
+              <USwitch v-model="smtpState.secure" />
+            </UFormField>
+
+            <div class="grid grid-cols-2 gap-3">
+              <UFormField label="Логин (обычно полный email)">
+                <UInput
+                  v-model="smtpState.user"
+                  placeholder="no-reply@origon.pro"
+                  icon="i-lucide-user"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Пароль">
+                <UInput
+                  v-model="smtpState.password"
+                  type="password"
+                  placeholder="••••••••"
+                  icon="i-lucide-lock"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <UFormField
+                label="Email отправителя"
+                description="С какого адреса покупатель увидит письмо."
+              >
+                <UInput
+                  v-model="smtpState.fromEmail"
+                  placeholder="no-reply@origon.pro"
+                  icon="i-lucide-mail"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField
+                label="Имя отправителя"
+                description="Отображаемое имя рядом с адресом."
+              >
+                <UInput
+                  v-model="smtpState.fromName"
+                  placeholder="FreshDonate Shop"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <USeparator />
+
+            <div class="flex items-end gap-3 flex-wrap">
+              <UFormField
+                label="Отправить тестовое письмо на"
+                class="flex-1 min-w-[240px]"
+              >
+                <UInput
+                  v-model="smtpTestEmail"
+                  type="email"
+                  placeholder="test@example.com"
+                  icon="i-lucide-send"
+                  class="w-full"
+                />
+              </UFormField>
+              <UButton
+                label="Тест"
+                icon="i-lucide-send"
+                variant="soft"
+                :loading="smtpTestLoading"
+                :disabled="!smtpState.host"
+                @click="sendTestEmail"
+              />
+              <UButton
+                label="Сохранить"
+                icon="i-lucide-save"
+                :loading="smtpLoading"
+                @click="saveSmtp"
+              />
+            </div>
+
+            <div class="flex gap-3 p-3 rounded-lg bg-info/10 border border-info/20">
+              <UIcon
+                name="i-lucide-info"
+                class="size-5 text-info shrink-0 mt-0.5"
+              />
+              <p class="text-xs text-muted">
+                Тестовое письмо будет отправлено с текущим (несохранённым) шаблоном чека.
+                Если письмо ушло в спам — проверьте DNS-записи SPF и DKIM у своего домена.
+              </p>
+            </div>
+          </div>
+        </UPageCard>
+
+        <!-- Receipt template -->
+        <UPageCard
+          title="Оформление чека"
+          description="HTML-шаблон письма-подтверждения. Используйте плейсхолдеры {имя} для подстановки данных заказа."
+        >
+          <div class="space-y-4">
+            <UFormField
+              label="Тема письма"
+            >
+              <UInput
+                v-model="receiptState.subject"
+                placeholder="Чек о покупке — {productName}"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              label="HTML письма"
+              :description="`Поддерживаются inline-стили (style=&quot;...&quot;) и таблицы. ${receiptState.html.length} / 100000 символов.`"
+            >
+              <UTextarea
+                v-model="receiptState.html"
+                :rows="18"
+                placeholder="<html>...</html>"
+                class="w-full font-mono text-xs"
+              />
+            </UFormField>
+
+            <div>
+              <p class="text-sm font-medium mb-2">
+                Доступные плейсхолдеры
+              </p>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="ph in placeholders"
+                  :key="ph.key"
+                  type="button"
+                  :title="ph.description"
+                  class="text-xs px-2 py-1 rounded-md bg-elevated hover:bg-primary/10 hover:text-primary border border-default font-mono cursor-pointer transition-colors"
+                  @click="copyPlaceholder(ph.key)"
+                >
+                  {{ '{' + ph.key + '}' }}
+                </button>
+              </div>
+              <p class="text-xs text-muted mt-2">
+                Кликните по плейсхолдеру, чтобы скопировать. Наведите курсор — увидите подсказку.
+              </p>
+            </div>
+
+            <USeparator />
+
+            <div class="flex gap-3">
+              <UButton
+                label="Сохранить"
+                icon="i-lucide-save"
+                :loading="receiptLoading"
+                @click="saveReceiptTemplate"
+              />
+              <UButton
+                label="Предпросмотр"
+                icon="i-lucide-eye"
+                variant="soft"
+                color="neutral"
+                @click="openReceiptPreview"
+              />
+            </div>
+          </div>
+        </UPageCard>
       </div>
+
+      <!-- Receipt preview modal -->
+      <UModal v-model:open="receiptPreviewOpen">
+        <template #content>
+          <div class="p-4 space-y-3 max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-bold">
+                Предпросмотр чека
+              </h3>
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                color="neutral"
+                square
+                @click="receiptPreviewOpen = false"
+              />
+            </div>
+            <div class="text-xs text-muted">
+              <span class="font-medium text-default">Тема:</span> {{ receiptPreviewSubject }}
+            </div>
+            <div
+              v-if="receiptPreviewLoading"
+              class="flex items-center justify-center py-10"
+            >
+              <UIcon
+                name="i-lucide-loader-circle"
+                class="size-6 animate-spin text-muted"
+              />
+            </div>
+            <iframe
+              v-else
+              :srcdoc="receiptPreviewHtml"
+              class="flex-1 w-full min-h-[60vh] border border-default rounded-md bg-white"
+              sandbox=""
+            />
+          </div>
+        </template>
+      </UModal>
 
       <!-- Switch warning modal -->
       <UModal v-model:open="showSwitchWarning">

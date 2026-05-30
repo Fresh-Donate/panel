@@ -3,10 +3,10 @@ import { sub } from 'date-fns'
 import type { Period, Range } from '~/types'
 
 const range = shallowRef<Range>({
-  start: sub(new Date(), { hours: 24 }),
+  start: sub(new Date(), { weeks: 1 }),
   end: new Date()
 })
-const period: Period = 'hourly'
+const period: Period = 'daily'
 
 const { summary, load: loadSummary } = useStatsSummary()
 watch(
@@ -71,6 +71,7 @@ const quickActions: QuickAction[] = [
           metric="amount"
           :period="period"
           :range="range"
+          summary-mode="today"
           :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
         />
         <HomeMetricChart
@@ -78,6 +79,7 @@ const quickActions: QuickAction[] = [
           metric="count"
           :period="period"
           :range="range"
+          summary-mode="today"
           :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
           color="var(--ui-success)"
         />
