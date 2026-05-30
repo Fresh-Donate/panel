@@ -52,16 +52,9 @@ const schema = z.object({
   description: z.string().max(500, 'Максимум 500 символов').optional(),
   ip: z.string().min(1, 'Минимум 1 символ').max(64, 'Максимум 64 символа').optional(),
   color: z.string().min(1, 'Выберите цвет'),
-  // Optional from the user's POV (fresh installs leave it blank), but if
-  // provided it must be a real URL — backend uses it for canonical / OG /
-  // sitemap, and the panel uses it to ping the shop's `/api/version`.
   shopUrl: z.union([z.literal(''), z.string().url('Должен быть валидный URL').max(256, 'Максимум 256 символов')]).optional(),
-  // All "owner" fields are optional. They populate the public legal pages
-  // (оферта / соглашение / приватность); blank means "не указано".
   ownerName: z.string().max(256, 'Максимум 256 символов').optional(),
   ownerType: z.enum(['', 'individual', 'self_employed', 'sole_proprietor', 'legal_entity']).optional(),
-  // INN is 10 digits (юрлица) or 12 digits (ИП / самозанятые / физлица).
-  // Empty string is allowed — the field is opt-in.
   ownerInn: z.union([
     z.literal(''),
     z.string().regex(/^\d{10}$|^\d{12}$/, 'ИНН должен содержать 10 или 12 цифр')
@@ -137,9 +130,6 @@ async function onSubmit() {
         description: state.description,
         ip: state.ip,
         color: state.color,
-        // Empty string means "unset" — backend treats it as no override and
-        // the shop falls back to the live origin. Skip the field entirely
-        // when blank so we don't trip the JSON Schema `format: 'uri'` check.
         ...(state.shopUrl ? { shopUrl: state.shopUrl } : {}),
         ownerName: state.ownerName ?? '',
         ownerType: state.ownerType ?? '',
