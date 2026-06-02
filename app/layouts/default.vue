@@ -174,6 +174,12 @@ const links = [[{
       open.value = false
     }
   }, {
+    label: 'Серверы',
+    to: '/settings/servers',
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
     label: 'Уведомления',
     badge: 'Soon',
     to: '/settings/notifications',

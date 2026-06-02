@@ -30,6 +30,7 @@ export interface Product {
   discountPercent?: number
   discountedPrice?: number
   groups?: ProductGroup[]
+  serverIds?: string[]
   createdAt: string
   updatedAt: string
 }
