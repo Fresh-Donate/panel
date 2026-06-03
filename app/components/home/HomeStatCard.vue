@@ -33,7 +33,7 @@ const displayValue = computed(() =>
 const sparkX = (_: number, i: number) => i
 const sparkY = (d: number) => d
 
-// Unique per-instance gradient id — иначе несколько карточек на странице
+// Unique per-instance gradient id - иначе несколько карточек на странице
 // будут писать <linearGradient> с одинаковым id, и url(#...) у всех укажет
 // на первый встретившийся (валидно по HTML, но непредсказуемо при стилизации).
 const gradientId = `spark-gradient-${useId().replace(/[^a-zA-Z0-9-]/g, '')}`

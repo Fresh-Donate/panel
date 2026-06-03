@@ -274,7 +274,7 @@ const columns: TableColumn<Server>[] = [
           </p>
           <UFormField
             label="Включить мультисервера"
-            description="Работает только через плагин (RCON не поддерживается). После включения в карточке каждого товара нужно будет выбрать сервера выдачи — товары без выбранных серверов скрываются на витрине."
+            description="Работает только через плагин (RCON не поддерживается). После включения в карточке каждого товара нужно будет выбрать сервера выдачи - товары без выбранных серверов скрываются на витрине."
           >
             <USwitch
               v-model="multiServerEnabled"
@@ -307,7 +307,7 @@ const columns: TableColumn<Server>[] = [
         <UPageCard
           v-if="savedMultiServerEnabled"
           title="Список серверов"
-          description="Каждому серверу присваивается уникальный ID — его нужно указать в config.yml плагина как server-id."
+          description="Каждому серверу присваивается уникальный ID - его нужно указать в config.yml плагина как server-id."
         >
           <UTable
             v-if="servers.length > 0"
@@ -339,7 +339,7 @@ const columns: TableColumn<Server>[] = [
             </template>
 
             <template #ip-cell="{ row }">
-              <span class="text-sm text-muted">{{ row.original.ip || '—' }}</span>
+              <span class="text-sm text-muted">{{ row.original.ip || '-' }}</span>
             </template>
 
             <template #productIds-cell="{ row }">
@@ -407,9 +407,9 @@ const columns: TableColumn<Server>[] = [
 
             <ul class="text-sm text-muted space-y-1.5 list-disc list-inside">
               <li>Товары без выбранных серверов будут <strong class="text-default">скрыты на витрине магазина</strong> до настройки.</li>
-              <li>Способ выдачи RCON будет недоступен — мультисервера работают только через плагин.</li>
+              <li>Способ выдачи RCON будет недоступен - мультисервера работают только через плагин.</li>
               <li>Для каждого товара, на котором выбрано 2+ серверов, принудительная выдача включится автоматически.</li>
-              <li>Плагин на каждом сервере должен указать уникальный server-id в своём config.yml — нельзя ставить один и тот же конфиг на два физических сервера, иначе выдача задвоится.</li>
+              <li>Плагин на каждом сервере должен указать уникальный server-id в своём config.yml - нельзя ставить один и тот же конфиг на два физических сервера, иначе выдача задвоится.</li>
             </ul>
 
             <div class="flex justify-end gap-3 pt-2">
@@ -437,7 +437,7 @@ const columns: TableColumn<Server>[] = [
                 Новый сервер
               </h3>
               <p class="text-sm text-muted mt-0.5">
-                ID можно оставить пустым — он сгенерируется автоматически.
+                ID можно оставить пустым - он сгенерируется автоматически.
               </p>
             </div>
 
@@ -454,7 +454,7 @@ const columns: TableColumn<Server>[] = [
 
             <UFormField
               label="ID"
-              description="Указывается в config.yml плагина как server-id. Маршрутизирует выдачу на конкретный сервер. Авторизация плагина — отдельный токен из «Настройки → Общее → Выдача». 4–64 символа: буквы, цифры, '_', '-'."
+              description="Указывается в config.yml плагина как server-id. Маршрутизирует выдачу на конкретный сервер. Авторизация плагина - отдельный токен из «Настройки → Общее → Выдача». 4–64 символа: буквы, цифры, '_', '-'."
             >
               <UInput
                 v-model="newServer.id"

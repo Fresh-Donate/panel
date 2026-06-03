@@ -28,6 +28,11 @@ const credentialLabels: Record<string, Record<string, { label: string, placehold
   wata: {
     apiKey: { label: 'Access Token', placeholder: 'JWT-токен из кабинета Wata (prod или sandbox)' }
   },
+  robokassa: {
+    merchantLogin: { label: 'Merchant Login', placeholder: 'Идентификатор магазина из кабинета Robokassa' },
+    password1: { label: 'Пароль #1', placeholder: 'Пароль #1 (используется для формирования платежа)' },
+    password2: { label: 'Пароль #2', placeholder: 'Пароль #2 (используется для проверки ResultURL)' }
+  },
   tebex: {
     webstoreToken: { label: 'Webstore Token', placeholder: 'Публичный токен из настроек Tebex (Webstore Builder → API Keys)' },
     privateKey: { label: 'Private Key', placeholder: 'Приватный ключ из настроек Tebex' },
@@ -40,6 +45,7 @@ const webhookUrls: Record<string, string> = {
   heleket: `При создании мерчанта Heleket укажите ${url}/webhooks/heleket`,
   cryptobot: `В @CryptoBot → Crypto Pay → My Apps → ваше приложение → Webhooks включите вебхуки и укажите URL ${url}/webhooks/cryptobot`,
   wata: `В терминале WATA укажите webhook ${url}/webhooks/wata`,
+  robokassa: `В кабинете Robokassa → Технические настройки → ResultURL: ${url}/webhooks/robokassa (метод POST). Алгоритм подписи должен совпадать с настройкой в админке (по умолчанию SHA256).`,
   tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`,
   cryptobot: `В @Cryptobot укажите webhook ${url}/webhooks/cryptobot`
 }

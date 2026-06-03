@@ -16,7 +16,7 @@ interface CustomerItem {
 }
 
 // Sortable columns. `totalSpent` is sorted on the server using the
-// admin-configured currency rates (see "Курсы валют" in общие настройки) —
+// admin-configured currency rates (see "Курсы валют" in общие настройки) -
 // each payment's amount is normalised to RUB before summing, so customers
 // with mixed-currency stats compare correctly.
 type SortableColumn = 'nickname' | 'email' | 'purchaseCount' | 'totalSpent' | 'createdAt'
@@ -82,7 +82,7 @@ function toggleSort(column: SortableColumn) {
   } else {
     sortBy.value = column
     // Strings: A→Z first feels natural. Numeric / date: largest / newest
-    // first is what the admin almost always wants — top customers, latest
+    // first is what the admin almost always wants - top customers, latest
     // signups, etc.
     sortOrder.value = column === 'nickname' || column === 'email' ? 'asc' : 'desc'
   }

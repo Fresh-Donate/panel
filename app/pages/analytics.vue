@@ -235,7 +235,7 @@ const columns = [
             <template #customer-cell="{ row }">
               <div>
                 <p class="font-medium">
-                  {{ row.original.customerNickname || '—' }}
+                  {{ row.original.customerNickname || '-' }}
                 </p>
                 <p class="text-xs text-muted">
                   {{ row.original.customerEmail || '' }}

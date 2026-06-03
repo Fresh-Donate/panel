@@ -262,7 +262,7 @@ async function onSubmit() {
           v-if="multiServerEnabled"
           label="Сервера выдачи"
           name="servers"
-          description="Товар будет выдан на каждом из выбранных серверов. Если ни одного — товар скрыт на витрине."
+          description="Товар будет выдан на каждом из выбранных серверов. Если ни одного - товар скрыт на витрине."
         >
           <USelectMenu
             v-model="selectedServerIds"

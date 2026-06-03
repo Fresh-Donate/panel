@@ -5,6 +5,7 @@ const { summary } = useStatsSummary()
 
 const PROVIDER_NAMES: Record<string, string> = {
   wata: 'Wata',
+  robokassa: 'Robokassa',
   tebex: 'Tebex',
   heleket: 'Heleket',
   yookassa: 'YooKassa'
