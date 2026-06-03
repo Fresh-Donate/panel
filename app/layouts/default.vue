@@ -174,7 +174,8 @@ const links = [[{
       open.value = false
     }
   }, {
-    label: 'Серверы',
+    label: 'Сервера',
+    badge: 'Beta',
     to: '/settings/servers',
     onSelect: () => {
       open.value = false
