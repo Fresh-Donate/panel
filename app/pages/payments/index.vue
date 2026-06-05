@@ -13,6 +13,18 @@ interface DeliveryLog {
   error?: string
 }
 
+interface PaymentLineItem {
+  id: string
+  productName: string
+  productPrice: number
+  productCurrency: string
+  quantity: number
+  userSelectedCount: number
+  lineTotal: number
+  discountPercent: number
+  upgradeDiscount: number
+}
+
 interface PaymentItem {
   id: string
   customerNickname: string
@@ -41,6 +53,8 @@ interface PaymentItem {
   createdAt: string
   updatedAt: string
   userSelectedCount: number
+  itemsCount: number
+  items?: PaymentLineItem[]
 }
 
 const config = useRuntimeConfig()
@@ -249,7 +263,17 @@ const columns = [
         class="h-[960px]"
       >
         <template #productName-cell="{ row }">
-          <span class="font-medium">{{ row.original.productName }}</span>
+          <div class="flex items-center gap-2">
+            <span class="font-medium">{{ row.original.productName }}</span>
+            <UBadge
+              v-if="row.original.itemsCount > 1"
+              :label="`+${row.original.itemsCount - 1}`"
+              color="primary"
+              variant="subtle"
+              size="xs"
+              :title="`Заказ из ${row.original.itemsCount} товаров`"
+            />
+          </div>
         </template>
         <template #customer-cell="{ row }">
           <div>
@@ -361,14 +385,43 @@ const columns = [
           />
         </div>
 
+        <!-- Cart line items -->
+        <div
+          v-if="selected.itemsCount > 1 && selected.items?.length"
+          class="rounded-lg border border-default p-3"
+        >
+          <p class="text-xs font-semibold mb-2 flex items-center gap-1.5">
+            <UIcon
+              name="i-lucide-shopping-cart"
+              class="size-3.5"
+            />
+            Состав заказа ({{ selected.itemsCount }})
+          </p>
+          <div class="space-y-1.5">
+            <div
+              v-for="item in selected.items"
+              :key="item.id"
+              class="flex items-center justify-between gap-2 text-xs"
+            >
+              <span class="truncate">
+                {{ item.productName }}
+                <span class="text-muted">× {{ item.userSelectedCount }}</span>
+              </span>
+              <span class="font-medium tabular-nums whitespace-nowrap">
+                {{ Number(item.lineTotal).toLocaleString() }}{{ currencySymbols[item.productCurrency] || item.productCurrency }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Info -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <p class="text-xs text-muted mb-0.5">
-              Товар
+              {{ selected.itemsCount > 1 ? 'Заказ' : 'Товар' }}
             </p>
             <p class="text-sm font-medium">
-              {{ selected.productName }}
+              {{ selected.itemsCount > 1 ? `Заказ из ${selected.itemsCount} товаров` : selected.productName }}
             </p>
             <p class="text-xs text-muted">
               {{ Number(selected.productPrice).toLocaleString() }}{{ currencySymbols[selected.productCurrency] || selected.productCurrency }}
@@ -418,7 +471,7 @@ const columns = [
               {{ selected.customerEmail || '' }}
             </p>
           </div>
-          <div>
+          <div v-if="selected.itemsCount <= 1">
             <p class="text-xs text-muted mb-0.5">
               Количество
             </p>

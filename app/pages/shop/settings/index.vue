@@ -62,7 +62,8 @@ const schema = z.object({
   contactEmail: z.union([
     z.literal(''),
     z.string().email('Должен быть валидный email').max(256, 'Максимум 256 символов')
-  ]).optional()
+  ]).optional(),
+  cartEnabled: z.boolean().optional()
 })
 
 type ShopSettingsSchema = z.output<typeof schema>
@@ -76,7 +77,8 @@ const state = reactive<ShopSettingsSchema>({
   ownerName: '',
   ownerType: '',
   ownerInn: '',
-  contactEmail: ''
+  contactEmail: '',
+  cartEnabled: false
 })
 
 const loading = ref(false)
@@ -92,6 +94,7 @@ function applyData(data: ShopSettingsSchema) {
   state.ownerType = data.ownerType || ''
   state.ownerInn = data.ownerInn || ''
   state.contactEmail = data.contactEmail || ''
+  state.cartEnabled = data.cartEnabled ?? false
 }
 
 // Load settings from API
@@ -134,7 +137,8 @@ async function onSubmit() {
         ownerName: state.ownerName ?? '',
         ownerType: state.ownerType ?? '',
         ownerInn: state.ownerInn ?? '',
-        contactEmail: state.contactEmail ?? ''
+        contactEmail: state.contactEmail ?? '',
+        cartEnabled: state.cartEnabled ?? false
       }
     })
     applyData(data)
@@ -284,6 +288,19 @@ async function onSubmit() {
                 @click="state.color = color"
               />
             </div>
+          </UFormField>
+
+          <USeparator />
+
+          <UFormField
+            label="Корзина"
+            name="cartEnabled"
+            description="Позволяет покупателям складывать несколько товаров в корзину и оплачивать всё одним платежом. Если выключено — работает обычная покупка одного товара в один клик."
+          >
+            <USwitch
+              v-model="state.cartEnabled"
+              label="Включить корзину"
+            />
           </UFormField>
 
           <USeparator />
