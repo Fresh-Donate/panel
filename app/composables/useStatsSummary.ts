@@ -9,9 +9,11 @@ export function useStatsSummary(key: string = 'stats-summary') {
 
   async function load(from: Date, to: Date, currency?: string) {
     loading.value = true
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const params: Record<string, string> = {
       from: from.toISOString(),
-      to: to.toISOString()
+      to: to.toISOString(),
+      tz
     }
     if (currency) params.currency = currency
     try {
