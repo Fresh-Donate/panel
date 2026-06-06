@@ -32,7 +32,8 @@ watch([() => props.period, () => props.range, () => props.currency, () => props.
   const to = props.range.end.toISOString()
 
   try {
-    const params: Record<string, string> = { from, to, period: props.period }
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const params: Record<string, string> = { from, to, period: props.period, tz }
     if (props.currency) params.currency = props.currency
 
     const chartData = await $fetch<{ date: string, amount: number, count: number }[]>('/stats/chart', {
