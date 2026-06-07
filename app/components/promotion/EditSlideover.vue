@@ -92,7 +92,7 @@ async function onSubmit() {
   <USlideover
     v-model:open="open"
     title="Редактирование акции"
-    description="Изменения вступают в силу сразу — обновлённая цена появится в магазине."
+    description="Изменения вступают в силу сразу - обновлённая цена появится в магазине."
   >
     <template #body>
       <UForm

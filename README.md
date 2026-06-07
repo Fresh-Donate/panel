@@ -1,4 +1,4 @@
-# FreshDonate — Admin Panel
+# FreshDonate - Admin Panel
 
 > Admin dashboard for managing products, payments, customers and server settings.
 
@@ -9,7 +9,7 @@ See also: [Backend](https://github.com/Fresh-Donate/backend) · [Shop](https://g
 
 ## About FreshDonate
 
-FreshDonate is a self‑hosted donation system for Minecraft servers. It lets you sell ranks, items, currency and any other in‑game goods through your own storefront, accept payments via multiple providers, and deliver purchases to players automatically the next time they are online — without any third‑party commission or lock‑in.
+FreshDonate is a self‑hosted donation system for Minecraft servers. It lets you sell ranks, items, currency and any other in‑game goods through your own storefront, accept payments via multiple providers, and deliver purchases to players automatically the next time they are online - without any third‑party commission or lock‑in.
 
 The platform is split into four repositories:
 
@@ -52,7 +52,7 @@ npm install
 npm run dev
 ```
 
-The panel starts on `http://localhost:3000` and expects the backend on `http://localhost:3001`. Override via environment variables (`NUXT_PUBLIC_API_BASE` and friends — see `nuxt.config.ts`).
+The panel starts on `http://localhost:3000` and expects the backend on `http://localhost:3001`. Override via environment variables (`NUXT_PUBLIC_API_BASE` and friends - see `nuxt.config.ts`).
 
 Default admin credentials match the backend: `admin` / `admin`. **Change them in production.**
 
@@ -101,9 +101,9 @@ server/          Nuxt server routes (if any)
 
 ## Related repositories
 
-- [fresh-donate-backend](https://github.com/Fresh-Donate/backend) — REST API this panel manages
-- [fresh-donate-shop](https://github.com/Fresh-Donate/shop) — public storefront
-- [fresh-donate-plugin](https://github.com/Fresh-Donate/fresh-donate-plugin) — Minecraft delivery plugin
+- [fresh-donate-backend](https://github.com/Fresh-Donate/backend) - REST API this panel manages
+- [fresh-donate-shop](https://github.com/Fresh-Donate/shop) - public storefront
+- [fresh-donate-plugin](https://github.com/Fresh-Donate/fresh-donate-plugin) - Minecraft delivery plugin
 
 ## License
 

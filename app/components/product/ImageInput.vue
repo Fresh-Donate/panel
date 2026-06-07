@@ -19,7 +19,7 @@ async function onFileSelected(event: Event) {
   if (file.size > MAX_BYTES) {
     toast.add({
       title: 'Файл слишком большой',
-      description: 'Максимальный размер изображения — 10 МБ.',
+      description: 'Максимальный размер изображения - 10 МБ.',
       icon: 'i-lucide-alert-circle',
       color: 'error'
     })

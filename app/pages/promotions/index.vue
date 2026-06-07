@@ -21,7 +21,7 @@ function authHeaders() {
 async function fetchAll() {
   loading.value = true
   try {
-    // Promotions list needs the products list too — we render product names
+    // Promotions list needs the products list too - we render product names
     // for each row and feed the slideover's multi-select.
     const [promos, prods] = await Promise.all([
       $fetch<Promotion[]>('/promotions', {

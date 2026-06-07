@@ -13,6 +13,7 @@ const AVAILABLE_CURRENCIES: Record<string, string[]> = {
   yookassa: ['RUB'],
   heleket: ['USD', 'EUR', 'RUB'],
   wata: ['RUB', 'USD', 'EUR'],
+  robokassa: ['RUB'],
   tebex: ['USD', 'EUR']
 }
 
@@ -30,7 +31,7 @@ const shouldShow = computed(() => options.value.length > 1)
   <UPageCard
     v-if="shouldShow"
     title="Валюта аккаунта"
-    description="В какой валюте у вас настроен аккаунт у этой платёжной системы. Если товары в другой валюте — сумма будет пересчитана по курсам из общих настроек."
+    description="В какой валюте у вас настроен аккаунт у этой платёжной системы. Если товары в другой валюте - сумма будет пересчитана по курсам из общих настроек."
   >
     <USelectMenu
       :model-value="selected"

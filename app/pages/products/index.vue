@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Product, ProductType, Currency } from '~/types'
+import type { Product, ProductType, Currency, Server } from '~/types'
 import type { TableColumn } from '@nuxt/ui'
 
 const toast = useToast()
@@ -42,14 +42,37 @@ function getCurrencySymbol(currency: Currency) {
 }
 
 const products = ref<Product[]>([])
+const servers = ref<Server[]>([])
+const multiServerEnabled = ref(false)
 const loading = ref(true)
 
 async function fetchProducts() {
+  products.value = await $fetch<Product[]>('/products', {
+    baseURL: config.public.apiBase as string,
+    headers: authHeaders()
+  })
+}
+
+async function fetchMultiServerContext() {
+  const settings = await $fetch<{ multi_server_enabled: boolean }>('/settings', {
+    baseURL: config.public.apiBase as string,
+    headers: authHeaders()
+  })
+  multiServerEnabled.value = settings.multi_server_enabled
+  if (settings.multi_server_enabled) {
+    servers.value = await $fetch<Server[]>('/servers', {
+      baseURL: config.public.apiBase as string,
+      headers: authHeaders()
+    })
+  } else {
+    servers.value = []
+  }
+}
+
+async function fetchAll() {
   loading.value = true
   try {
-    products.value = await $fetch<Product[]>('/products', {
-      baseURL: config.public.apiBase as string
-    })
+    await Promise.all([fetchProducts(), fetchMultiServerContext()])
   } catch {
     toast.add({ title: 'Ошибка загрузки', description: 'Не удалось загрузить товары.', icon: 'i-lucide-alert-circle', color: 'error' })
   } finally {
@@ -57,7 +80,7 @@ async function fetchProducts() {
   }
 }
 
-onMounted(fetchProducts)
+onMounted(fetchAll)
 
 const search = ref('')
 const filterType = ref<ProductType | 'all'>('all')
@@ -312,6 +335,8 @@ function getActions(product: Product) {
     v-model:open="showCreate"
     :product-types="productTypes"
     :currencies="currencies"
+    :servers="servers"
+    :multi-server-enabled="multiServerEnabled"
     @created="(p: Product) => { products.unshift(p); showCreate = false }"
   />
 
@@ -321,12 +346,14 @@ function getActions(product: Product) {
     :product="editingProduct"
     :product-types="productTypes"
     :currencies="currencies"
+    :servers="servers"
+    :multi-server-enabled="multiServerEnabled"
     @updated="onUpdated"
   />
 
   <GroupCreateSlideover
     v-model:open="showCreateGroup"
     :products="products"
-    @created="() => { showCreateGroup = false; fetchProducts() }"
+    @created="() => { showCreateGroup = false; fetchAll() }"
   />
 </template>

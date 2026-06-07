@@ -15,7 +15,7 @@ type SupportedCurrency = 'RUB' | 'USD' | 'EUR'
 
 const SUPPORTED_CURRENCIES: SupportedCurrency[] = ['RUB', 'USD', 'EUR']
 
-// Mirror of backend `defaultRatesFor` — small constant, kept duplicated
+// Mirror of backend `defaultRatesFor` - small constant, kept duplicated
 // instead of fetched so the form can re-seed instantly when the admin
 // switches the base, without a round trip.
 const DEFAULT_RATES_BY_BASE: Record<SupportedCurrency, Record<string, number>> = {
@@ -71,7 +71,7 @@ const rateCurrencies = computed(() => SUPPORTED_CURRENCIES.filter(c => c !== bas
 function setBaseCurrency(newBase: SupportedCurrency) {
   if (newBase === baseCurrency.value) return
   baseCurrency.value = newBase
-  // Stored rates were "X per old base" — meaningless under the new base.
+  // Stored rates were "X per old base" - meaningless under the new base.
   // Reseed from defaults so the form never carries forward broken numbers.
   rates.value = { ...DEFAULT_RATES_BY_BASE[newBase] }
 }
@@ -170,7 +170,7 @@ async function fetchPlaceholders() {
     })
     placeholders.value = data.placeholders
   } catch {
-    // Silent — placeholder reference is a nice-to-have, not critical.
+    // Silent - placeholder reference is a nice-to-have, not critical.
   }
 }
 
@@ -204,7 +204,7 @@ async function onSubmitGeneral() {
 function requestDeliverySwitch(method: DeliveryMethod) {
   if (method === deliveryMethod.value) return
   if (savedDeliveryMethod.value !== 'rcon' && savedDeliveryMethod.value !== 'plugin') {
-    // First time — no warning needed
+    // First time - no warning needed
     deliveryMethod.value = method
     return
   }
@@ -743,7 +743,7 @@ async function copyPlaceholder(key: string) {
         <!-- SMTP -->
         <UPageCard
           title="Отправка писем (SMTP)"
-          description="Подтверждения покупок отправляются покупателям на email. Подключите свой почтовый ящик (Яндекс, Mail.ru, Timeweb и т.п.) — настройки SMTP подскажет ваш провайдер."
+          description="Подтверждения покупок отправляются покупателям на email. Подключите свой почтовый ящик (Яндекс, Mail.ru, Timeweb и т.п.) - настройки SMTP подскажет ваш провайдер."
         >
           <div class="space-y-4">
             <UFormField
@@ -794,7 +794,7 @@ async function copyPlaceholder(key: string) {
 
             <UFormField
               label="Защищённое соединение (SSL/TLS)"
-              description="Включено для порта 465. Для 587 (STARTTLS) — выключено."
+              description="Включено для порта 465. Для 587 (STARTTLS) - выключено."
             >
               <USwitch v-model="smtpState.secure" />
             </UFormField>
@@ -881,7 +881,7 @@ async function copyPlaceholder(key: string) {
               />
               <p class="text-xs text-muted">
                 Тестовое письмо будет отправлено с текущим (несохранённым) шаблоном чека.
-                Если письмо ушло в спам — проверьте DNS-записи SPF и DKIM у своего домена.
+                Если письмо ушло в спам - проверьте DNS-записи SPF и DKIM у своего домена.
               </p>
             </div>
           </div>
@@ -898,7 +898,7 @@ async function copyPlaceholder(key: string) {
             >
               <UInput
                 v-model="receiptState.subject"
-                placeholder="Чек о покупке — {productName}"
+                placeholder="Чек о покупке - {productName}"
                 class="w-full"
               />
             </UFormField>
@@ -932,7 +932,7 @@ async function copyPlaceholder(key: string) {
                 </button>
               </div>
               <p class="text-xs text-muted mt-2">
-                Кликните по плейсхолдеру, чтобы скопировать. Наведите курсор — увидите подсказку.
+                Кликните по плейсхолдеру, чтобы скопировать. Наведите курсор - увидите подсказку.
               </p>
             </div>
 

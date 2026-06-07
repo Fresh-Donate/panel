@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import type { Product, ProductType, Currency } from '~/types'
+import type { Product, ProductType, Currency, Server } from '~/types'
 
 const props = defineProps<{
   product: Product
   productTypes: { value: ProductType, label: string, icon: string }[]
   currencies: { value: Currency, label: string }[]
+  servers?: Server[]
+  multiServerEnabled?: boolean
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -46,6 +48,8 @@ const state = reactive<FormState>({
   imageUrl: ''
 })
 
+const selectedServerIds = ref<string[]>([])
+
 watch(() => props.product, (p) => {
   if (p) {
     state.name = p.name
@@ -58,8 +62,16 @@ watch(() => props.product, (p) => {
     state.allowCustomCount = p.allowCustomCount || false
     state.forceDelivery = p.forceDelivery || false
     state.imageUrl = p.imageUrl || ''
+    selectedServerIds.value = [...(p.serverIds || [])]
   }
 }, { immediate: true })
+
+const forceDeliveryLocked = computed(() => selectedServerIds.value.length >= 2)
+watch(forceDeliveryLocked, (locked) => {
+  if (locked) state.forceDelivery = true
+})
+
+const serverOptions = computed(() => (props.servers || []).map(s => ({ label: s.name, value: s.id })))
 
 watch(() => state.type, (t) => {
   if (t === 'privilege') state.quantity = 1
@@ -110,7 +122,8 @@ async function onSubmit() {
         commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
         allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
         forceDelivery: state.forceDelivery,
-        imageUrl: state.imageUrl || ''
+        imageUrl: state.imageUrl || '',
+        serverIds: props.multiServerEnabled ? selectedServerIds.value : undefined
       }
     })
 
@@ -235,13 +248,36 @@ async function onSubmit() {
         <UFormField
           label="Выдавать принудительно"
           name="forceDelivery"
-          description="Выдача произойдёт даже если игрока нет на сервере."
+          :description="forceDeliveryLocked ? 'Включено автоматически: товар привязан к нескольким серверам.' : 'Выдача произойдёт даже если игрока нет на сервере.'"
           required
         >
           <USwitch
             v-model="state.forceDelivery"
+            :disabled="forceDeliveryLocked"
             class="w-full max-w-xs"
           />
+        </UFormField>
+
+        <UFormField
+          v-if="multiServerEnabled"
+          label="Сервера выдачи"
+          name="servers"
+          description="Товар будет выдан на каждом из выбранных серверов. Если ни одного - товар скрыт на витрине."
+        >
+          <USelectMenu
+            v-model="selectedServerIds"
+            :items="serverOptions"
+            value-key="value"
+            multiple
+            placeholder="Выберите сервера..."
+            class="w-full"
+          />
+          <p
+            v-if="serverOptions.length === 0"
+            class="text-xs text-warning mt-1.5"
+          >
+            Серверов пока нет. Добавьте их в разделе «Настройки → Серверы».
+          </p>
         </UFormField>
 
         <UFormField

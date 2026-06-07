@@ -31,7 +31,7 @@ const schema = z.object({
 type Schema = z.output<typeof schema>
 
 // UAuthForm submits via JS (no real navigation), so Chromium's "Save
-// password?" prompt won't fire on its own — nudge it via the Credential
+// password?" prompt won't fire on its own - nudge it via the Credential
 // Management API. Firefox / Safari fall back to autocomplete heuristics.
 async function rememberCredentials(loginValue: string, password: string) {
   if (typeof window === 'undefined') return
@@ -45,7 +45,7 @@ async function rememberCredentials(loginValue: string, password: string) {
     })
     await navigator.credentials.store(cred)
   } catch {
-    // Browser may decline (private mode, user rejected) — non-fatal.
+    // Browser may decline (private mode, user rejected) - non-fatal.
   }
 }
 
