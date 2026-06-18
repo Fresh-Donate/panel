@@ -154,6 +154,12 @@ function setCoinPackage(denomination: string, packageId: string) {
               @update:coin="setCoinPackage"
             />
 
+            <PaymentFiscalizationCard
+              v-if="selectedProvider.providerId === 'robokassa' || selectedProvider.providerId === 'yookassa'"
+              :provider="selectedProvider"
+              @update:config="selectedProvider.providerConfig = $event"
+            />
+
             <PaymentCommissionPercentCard
               v-model:commission-percent="selectedProvider.commissionPercent"
             />
