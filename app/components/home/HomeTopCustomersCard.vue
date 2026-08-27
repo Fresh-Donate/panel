@@ -38,7 +38,13 @@ async function load() {
       $fetch<{ items: CustomerDto[], total: number }>('/customers', {
         baseURL: config.public.apiBase as string,
         headers: { Authorization: `Bearer ${token.value}` },
-        params: { sortBy: 'totalSpent', sortOrder: 'desc', limit: '5' }
+        params: {
+          sortBy: 'totalSpent',
+          sortOrder: 'desc',
+          limit: '5',
+          from: props.range.start.toISOString(),
+          to: props.range.end.toISOString()
+        }
       }),
       $fetch<SettingsDto>('/settings', {
         baseURL: config.public.apiBase as string,
