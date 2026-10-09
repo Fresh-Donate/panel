@@ -2,13 +2,10 @@
 import type { Server } from '~/types'
 import type { TableColumn } from '@nuxt/ui'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-
-function authHeaders() {
-  return { Authorization: `Bearer ${token.value}` }
-}
+const api = useApi()
+const settingsStore = useSettingsStore()
+const notify = useNotify()
+const confirm = useConfirm()
 
 const fetching = ref(true)
 const multiServerEnabled = ref(false)
@@ -18,7 +15,6 @@ const toggleLoading = ref(false)
 
 const servers = ref<Server[]>([])
 
-const showWarning = ref(false)
 const showCreate = ref(false)
 const showEdit = ref(false)
 
@@ -32,25 +28,16 @@ const editLoading = ref(false)
 async function fetchAll() {
   fetching.value = true
   try {
-    const settings = await $fetch<{
-      multi_server_enabled: boolean
-      delivery_method: 'rcon' | 'plugin'
-    }>('/settings', {
-      baseURL: config.public.apiBase as string,
-      headers: authHeaders()
-    })
+    const settings = await settingsStore.load()
     multiServerEnabled.value = settings.multi_server_enabled
     savedMultiServerEnabled.value = settings.multi_server_enabled
     deliveryMethod.value = settings.delivery_method
 
     if (settings.multi_server_enabled) {
-      servers.value = await $fetch<Server[]>('/servers', {
-        baseURL: config.public.apiBase as string,
-        headers: authHeaders()
-      })
+      servers.value = await api<Server[]>('/servers')
     }
-  } catch {
-    toast.add({ title: 'Ошибка загрузки', icon: 'i-lucide-alert-circle', color: 'error' })
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить серверы.', 'Ошибка загрузки')
   } finally {
     fetching.value = false
   }
@@ -58,96 +45,80 @@ async function fetchAll() {
 
 onMounted(fetchAll)
 
-function requestToggle(next: boolean) {
+async function requestToggle(next: boolean) {
   if (next === savedMultiServerEnabled.value) return
-  if (next) {
-    if (deliveryMethod.value !== 'plugin') {
-      toast.add({
-        title: 'Сначала включите плагин',
-        description: 'Мультисервера работают только через плагин. Переключите способ выдачи в разделе «Настройки → Общее».',
-        icon: 'i-lucide-info',
-        color: 'warning'
-      })
-      multiServerEnabled.value = false
-      return
-    }
-    multiServerEnabled.value = true
-    showWarning.value = true
-  } else {
-    multiServerEnabled.value = false
-    void persistMultiServer(false)
+  if (!next) {
+    await persistMultiServer(false)
+    return
   }
+  if (deliveryMethod.value !== 'plugin') {
+    notify.error('Сначала включите плагин', 'Мультисервера работают только через плагин. Переключите способ выдачи в разделе «Настройки → Общее».')
+    multiServerEnabled.value = false
+    return
+  }
+  const confirmed = await confirm({
+    title: 'Включить мультисервера?',
+    description: 'Это может привести к последствиям. Будьте внимательны.',
+    details: [
+      'Товары без выбранных серверов будут скрыты на витрине магазина до настройки.',
+      'Способ выдачи RCON будет недоступен - мультисервера работают только через плагин.',
+      'Для каждого товара, на котором выбрано 2+ серверов, принудительная выдача включится автоматически.',
+      'Плагин на каждом сервере должен указать уникальный server-id в своём config.yml - нельзя ставить один и тот же конфиг на два физических сервера, иначе выдача задвоится.'
+    ],
+    confirmLabel: 'Включить',
+    color: 'warning'
+  })
+  if (confirmed) await persistMultiServer(true)
+  else multiServerEnabled.value = false
 }
 
 async function persistMultiServer(enabled: boolean) {
   toggleLoading.value = true
   try {
-    const data = await $fetch<{ multi_server_enabled: boolean }>('/settings', {
-      baseURL: config.public.apiBase as string,
-      method: 'PUT',
-      headers: authHeaders(),
-      body: { multi_server_enabled: enabled }
-    })
+    const data = await settingsStore.update({ multi_server_enabled: enabled })
     savedMultiServerEnabled.value = data.multi_server_enabled
     multiServerEnabled.value = data.multi_server_enabled
     if (data.multi_server_enabled && servers.value.length === 0) {
-      servers.value = await $fetch<Server[]>('/servers', {
-        baseURL: config.public.apiBase as string,
-        headers: authHeaders()
-      })
+      servers.value = await api<Server[]>('/servers')
     }
-    toast.add({
-      title: data.multi_server_enabled ? 'Мультисервера включены' : 'Мультисервера выключены',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch (err: any) {
-    const message = err?.data?.error || 'Не удалось сохранить настройку.'
-    toast.add({ title: 'Ошибка', description: message, icon: 'i-lucide-alert-circle', color: 'error' })
+    notify.success(data.multi_server_enabled ? 'Мультисервера включены' : 'Мультисервера выключены')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось сохранить настройку.')
     multiServerEnabled.value = savedMultiServerEnabled.value
   } finally {
     toggleLoading.value = false
   }
 }
 
-function confirmEnable() {
-  showWarning.value = false
-  void persistMultiServer(true)
-}
-
-function cancelEnable() {
-  showWarning.value = false
-  multiServerEnabled.value = false
-}
-
 function openCreate() {
-  newServer.id = ''
-  newServer.name = ''
-  newServer.ip = ''
+  Object.assign(newServer, { id: '', name: '', ip: '' })
   showCreate.value = true
 }
 
 async function createServer() {
   createLoading.value = true
   try {
-    const body: Record<string, string> = { name: newServer.name }
-    if (newServer.id.trim()) body.id = newServer.id.trim()
-    if (newServer.ip.trim()) body.ip = newServer.ip.trim()
-    const server = await $fetch<Server>('/servers', {
-      baseURL: config.public.apiBase as string,
+    const server = await api<Server>('/servers', {
       method: 'POST',
-      headers: authHeaders(),
-      body
+      body: {
+        name: newServer.name,
+        id: newServer.id.trim() || undefined,
+        ip: newServer.ip.trim() || undefined
+      }
     })
     servers.value.unshift(server)
     showCreate.value = false
-    toast.add({ title: 'Сервер создан', icon: 'i-lucide-check-circle', color: 'success' })
-  } catch (err: any) {
-    const message = err?.data?.error || 'Не удалось создать сервер.'
-    toast.add({ title: 'Ошибка', description: message, icon: 'i-lucide-alert-circle', color: 'error' })
+    notify.success('Сервер создан')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось создать сервер.')
   } finally {
     createLoading.value = false
   }
+}
+
+function closeModals() {
+  showCreate.value = false
+  showEdit.value = false
 }
 
 function openEdit(server: Server) {
@@ -161,47 +132,43 @@ async function updateServer() {
   if (!editing.value) return
   editLoading.value = true
   try {
-    const updated = await $fetch<Server>(`/servers/${editing.value.id}`, {
-      baseURL: config.public.apiBase as string,
+    const updated = await api<Server>(`/servers/${editing.value.id}`, {
       method: 'PUT',
-      headers: authHeaders(),
       body: { name: editForm.name, ip: editForm.ip }
     })
     const idx = servers.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) servers.value[idx] = updated
     showEdit.value = false
-    toast.add({ title: 'Сохранено', icon: 'i-lucide-check-circle', color: 'success' })
-  } catch (err: any) {
-    const message = err?.data?.error || 'Не удалось обновить сервер.'
-    toast.add({ title: 'Ошибка', description: message, icon: 'i-lucide-alert-circle', color: 'error' })
+    notify.success('Сохранено')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось обновить сервер.')
   } finally {
     editLoading.value = false
   }
 }
 
 async function deleteServer(server: Server) {
-  if (!confirm(`Удалить сервер "${server.name}"? Привязки товаров к этому серверу сохранятся в истории, но новые выдачи на нём пойти не смогут.`)) {
-    return
-  }
+  const confirmed = await confirm({
+    title: `Удалить сервер «${server.name}»?`,
+    description: 'Привязки товаров к этому серверу сохранятся в истории, но новые выдачи на нём пойти не смогут.',
+    confirmLabel: 'Удалить'
+  })
+  if (!confirmed) return
   try {
-    await $fetch(`/servers/${server.id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'DELETE',
-      headers: authHeaders()
-    })
+    await api(`/servers/${server.id}`, { method: 'DELETE' })
     servers.value = servers.value.filter(s => s.id !== server.id)
-    toast.add({ title: 'Сервер удалён', icon: 'i-lucide-trash-2', color: 'success' })
-  } catch {
-    toast.add({ title: 'Ошибка', description: 'Не удалось удалить сервер.', icon: 'i-lucide-alert-circle', color: 'error' })
+    notify.success('Сервер удалён', undefined, 'i-lucide-trash-2')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось удалить сервер.')
   }
 }
 
 async function copyId(id: string) {
   try {
     await navigator.clipboard.writeText(id)
-    toast.add({ title: 'ID скопирован', icon: 'i-lucide-clipboard-check', color: 'success' })
+    notify.success('ID скопирован', undefined, 'i-lucide-clipboard-check')
   } catch {
-    toast.add({ title: 'Не удалось скопировать', color: 'error' })
+    notify.error('Не удалось скопировать')
   }
 }
 
@@ -385,50 +352,6 @@ const columns: TableColumn<Server>[] = [
         </UPageCard>
       </div>
 
-      <UModal v-model:open="showWarning">
-        <template #content>
-          <div class="p-6 space-y-4">
-            <div class="flex items-center gap-3">
-              <div class="size-10 rounded-full bg-warning/10 flex items-center justify-center shrink-0">
-                <UIcon
-                  name="i-lucide-triangle-alert"
-                  class="size-5 text-warning"
-                />
-              </div>
-              <div>
-                <h3 class="font-bold">
-                  Включить мультисервера?
-                </h3>
-                <p class="text-sm text-muted mt-0.5">
-                  Это может привести к последствиям. Будьте внимательны.
-                </p>
-              </div>
-            </div>
-
-            <ul class="text-sm text-muted space-y-1.5 list-disc list-inside">
-              <li>Товары без выбранных серверов будут <strong class="text-default">скрыты на витрине магазина</strong> до настройки.</li>
-              <li>Способ выдачи RCON будет недоступен - мультисервера работают только через плагин.</li>
-              <li>Для каждого товара, на котором выбрано 2+ серверов, принудительная выдача включится автоматически.</li>
-              <li>Плагин на каждом сервере должен указать уникальный server-id в своём config.yml - нельзя ставить один и тот же конфиг на два физических сервера, иначе выдача задвоится.</li>
-            </ul>
-
-            <div class="flex justify-end gap-3 pt-2">
-              <UButton
-                label="Отмена"
-                variant="ghost"
-                color="neutral"
-                @click="cancelEnable"
-              />
-              <UButton
-                label="Включить"
-                color="warning"
-                @click="confirmEnable"
-              />
-            </div>
-          </div>
-        </template>
-      </UModal>
-
       <UModal v-model:open="showCreate">
         <template #content>
           <div class="p-6 space-y-4">
@@ -479,7 +402,7 @@ const columns: TableColumn<Server>[] = [
                 label="Отмена"
                 variant="ghost"
                 color="neutral"
-                @click="showCreate = false"
+                @click="closeModals"
               />
               <UButton
                 label="Создать"
@@ -533,7 +456,7 @@ const columns: TableColumn<Server>[] = [
                 label="Отмена"
                 variant="ghost"
                 color="neutral"
-                @click="showEdit = false"
+                @click="closeModals"
               />
               <UButton
                 label="Сохранить"

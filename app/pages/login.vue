@@ -5,7 +5,7 @@ import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
 definePageMeta({ layout: 'auth' })
 
 const auth = useAuthStore()
-const toast = useToast()
+const notify = useNotify()
 
 const fields: AuthFormField[] = [{
   name: 'login',
@@ -33,12 +33,13 @@ type Schema = z.output<typeof schema>
 // UAuthForm submits via JS (no real navigation), so Chromium's "Save
 // password?" prompt won't fire on its own - nudge it via the Credential
 // Management API. Firefox / Safari fall back to autocomplete heuristics.
+type PasswordCredentialCtor = new (data: { id: string, password: string, name?: string }) => Credential
+
 async function rememberCredentials(loginValue: string, password: string) {
-  if (typeof window === 'undefined') return
-  const PasswordCredentialCtor = (window as any).PasswordCredential
-  if (!PasswordCredentialCtor || !navigator.credentials?.store) return
+  const Ctor = (window as Window & { PasswordCredential?: PasswordCredentialCtor }).PasswordCredential
+  if (!Ctor || !navigator.credentials?.store) return
   try {
-    const cred = new PasswordCredentialCtor({
+    const cred = new Ctor({
       id: loginValue,
       password,
       name: loginValue
@@ -54,10 +55,9 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   try {
     await auth.login(data.login, data.password)
     await rememberCredentials(data.login, data.password)
-    navigateTo('/')
-  } catch (e: any) {
-    console.error(e)
-    toast.add({ title: 'Ошибка входа', description: e?.data?.message || 'Неверный логин или пароль', color: 'error', icon: 'lucide:shield-alert' })
+    await navigateTo('/')
+  } catch (err) {
+    notify.apiError(err, 'Неверный логин или пароль', 'Ошибка входа')
   }
 }
 </script>

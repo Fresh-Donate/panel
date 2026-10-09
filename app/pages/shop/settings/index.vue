@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
 
 const tailwindColors: Record<string, string> = {
   slate: '#64748b',
@@ -97,21 +96,12 @@ function applyData(data: ShopSettingsSchema) {
   state.cartEnabled = data.cartEnabled ?? false
 }
 
-// Load settings from API
 async function fetchSettings() {
   fetching.value = true
   try {
-    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
-      baseURL: config.public.apiBase as string
-    })
-    applyData(data)
-  } catch {
-    toast.add({
-      title: 'Ошибка загрузки',
-      description: 'Не удалось загрузить настройки магазина.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    applyData(await api<ShopSettingsSchema>('/shop-settings'))
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить настройки магазина.', 'Ошибка загрузки')
   } finally {
     fetching.value = false
   }
@@ -122,12 +112,8 @@ onMounted(fetchSettings)
 async function onSubmit() {
   loading.value = true
   try {
-    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
-      baseURL: config.public.apiBase as string,
+    const data = await api<ShopSettingsSchema>('/shop-settings', {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      },
       body: {
         name: state.name,
         description: state.description,
@@ -142,19 +128,9 @@ async function onSubmit() {
       }
     })
     applyData(data)
-    toast.add({
-      title: 'Настройки сохранены',
-      description: 'Настройки магазина успешно обновлены.',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось сохранить настройки.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    notify.success('Настройки сохранены', 'Настройки магазина успешно обновлены.')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось сохранить настройки.')
   } finally {
     loading.value = false
   }

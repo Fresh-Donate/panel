@@ -13,9 +13,6 @@ const PROVIDER_NAMES: Record<string, string> = {
 
 const COLORS = ['#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd', '#e0f2fe']
 
-const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
-const currencySymbol = computed(() => currencySymbols[summary.value?.currency || 'RUB'] || '₽')
-
 const items = computed(() => {
   const providers = summary.value?.paymentProviders ?? []
   const total = providers.reduce((acc, p) => acc + p.amount, 0)
@@ -36,7 +33,7 @@ const donutValue = (d: { amount: number }) => d.amount
 const donutColor = (d: { color: string }) => d.color
 
 function formatAmount(n: number): string {
-  return `${n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol.value}`
+  return formatMoney(n, summary.value?.currency || 'RUB', { cents: true })
 }
 </script>
 

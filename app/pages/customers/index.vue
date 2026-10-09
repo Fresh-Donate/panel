@@ -1,33 +1,15 @@
 <script setup lang="ts">
 import { h, resolveComponent } from 'vue'
+import type { Customer, CustomerSortColumn, Paginated } from '~/types'
 
-interface CustomerCurrencyStats {
-  currency: string
-  totalSpent: number
-  purchaseCount: number
-}
-interface CustomerItem {
-  id: string
-  nickname: string
-  email: string
-  stats: CustomerCurrencyStats[]
-  createdAt: string
-  updatedAt: string
-}
-
-// Sortable columns. `totalSpent` is sorted on the server using the
-// admin-configured currency rates (see "Курсы валют" in общие настройки) -
-// each payment's amount is normalised to RUB before summing, so customers
-// with mixed-currency stats compare correctly.
-type SortableColumn = 'nickname' | 'email' | 'purchaseCount' | 'totalSpent' | 'createdAt'
+type SortableColumn = CustomerSortColumn
 type SortDirection = 'asc' | 'desc'
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-const toast = useToast()
+const api = useApi()
+const notify = useNotify()
 
 const fetching = ref(true)
-const customers = ref<CustomerItem[]>([])
+const customers = ref<Customer[]>([])
 const total = ref(0)
 const search = ref('')
 const page = ref(1)
@@ -39,26 +21,19 @@ const sortOrder = ref<SortDirection>('desc')
 async function fetchCustomers() {
   fetching.value = true
   try {
-    const params = new URLSearchParams()
-    if (search.value) params.set('search', search.value)
-    params.set('limit', String(pageSize))
-    params.set('offset', String((page.value - 1) * pageSize))
-    params.set('sortBy', sortBy.value)
-    params.set('sortOrder', sortOrder.value)
-
-    const data = await $fetch<{ items: CustomerItem[], total: number }>(`/customers?${params}`, {
-      baseURL: config.public.apiBase as string,
-      headers: { Authorization: `Bearer ${token.value}` }
+    const data = await api<Paginated<Customer>>('/customers', {
+      query: {
+        search: search.value || undefined,
+        limit: pageSize,
+        offset: (page.value - 1) * pageSize,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value
+      }
     })
     customers.value = data.items
     total.value = data.total
-  } catch {
-    toast.add({
-      title: 'Ошибка загрузки',
-      description: 'Не удалось загрузить клиентов.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить клиентов.', 'Ошибка загрузки')
   } finally {
     fetching.value = false
   }
@@ -66,28 +41,22 @@ async function fetchCustomers() {
 
 onMounted(fetchCustomers)
 
-watch(search, () => {
-  page.value = 1
-  fetchCustomers()
-})
+watchDebounced(search, () => {
+  if (page.value === 1) fetchCustomers()
+  else page.value = 1
+}, { debounce: 300 })
 
 watch(page, fetchCustomers)
 
-// Clicking a column either flips the direction (if already sorted by it)
-// or switches to that column with a sensible default direction. Strings go
-// asc-first (A→Z), numeric / date go desc-first (newest / largest first).
 function toggleSort(column: SortableColumn) {
   if (sortBy.value === column) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
     sortBy.value = column
-    // Strings: A→Z first feels natural. Numeric / date: largest / newest
-    // first is what the admin almost always wants - top customers, latest
-    // signups, etc.
     sortOrder.value = column === 'nickname' || column === 'email' ? 'asc' : 'desc'
   }
-  page.value = 1
-  fetchCustomers()
+  if (page.value === 1) fetchCustomers()
+  else page.value = 1
 }
 
 function sortIcon(column: SortableColumn): string {
@@ -96,16 +65,6 @@ function sortIcon(column: SortableColumn): string {
 }
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize))
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
 
 const UButton = resolveComponent('UButton')
 
@@ -184,13 +143,13 @@ const columns = [
 
         <template #totalSpent-cell="{ row }">
           <span class="font-semibold">
-            {{ row.original.stats.map((s) => `${Number(s.totalSpent).toLocaleString()} ${s.currency}`).join(', ') }}
+            {{ row.original.stats.map((s) => formatMoney(s.totalSpent, s.currency)).join(', ') }}
           </span>
         </template>
 
         <template #createdAt-cell="{ row }">
           <span class="text-sm text-muted">
-            {{ formatDate(row.original.createdAt) }}
+            {{ formatDateTime(row.original.createdAt) }}
           </span>
         </template>
       </UTable>
@@ -213,7 +172,7 @@ const columns = [
         class="flex justify-center mt-6"
       >
         <UPagination
-          v-model="page"
+          v-model:page="page"
           :total="total"
           :items-per-page="pageSize"
         />

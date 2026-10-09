@@ -1,9 +1,6 @@
 <script setup lang="ts">
 const { summary } = useStatsSummary()
 
-const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
-const currencySymbol = computed(() => currencySymbols[summary.value?.currency || 'RUB'] || '₽')
-
 const items = computed(() => {
   const top = (summary.value?.topProducts ?? []).slice(0, 5)
   const totalAmount = top.reduce((acc, p) => acc + p.amount, 0)
@@ -17,7 +14,7 @@ const items = computed(() => {
 })
 
 function formatAmount(n: number): string {
-  return `${n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol.value}`
+  return formatMoney(n, summary.value?.currency || 'RUB', { cents: true })
 }
 </script>
 

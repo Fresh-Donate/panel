@@ -1,58 +1,32 @@
 <script setup lang="ts">
-import type { Range } from '~/types'
+import type { Customer, CustomerCurrencyStats, Paginated, Range } from '~/types'
 
 const props = defineProps<{
   range: Range
   currency?: string
 }>()
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const settingsStore = useSettingsStore()
+const { settings } = storeToRefs(settingsStore)
 
-interface CustomerStat {
-  currency: string
-  totalSpent: number
-  purchaseCount: number
-}
-
-interface CustomerDto {
-  id: string
-  nickname: string
-  email: string
-  stats: CustomerStat[]
-  createdAt: string
-  updatedAt: string
-}
-
-interface SettingsDto {
-  base_currency: string
-  currency_rates: Record<string, number>
-}
-
-const customers = ref<CustomerDto[]>([])
-const settings = ref<SettingsDto | null>(null)
+const customers = ref<Customer[]>([])
 
 async function load() {
   try {
-    const [list, s] = await Promise.all([
-      $fetch<{ items: CustomerDto[], total: number }>('/customers', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` },
-        params: {
+    const [list] = await Promise.all([
+      api<Paginated<Customer>>('/customers', {
+        query: {
           sortBy: 'totalSpent',
           sortOrder: 'desc',
-          limit: '5',
+          limit: 5,
           from: props.range.start.toISOString(),
           to: props.range.end.toISOString()
         }
       }),
-      $fetch<SettingsDto>('/settings', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` }
-      })
+      settingsStore.ensureLoaded()
     ])
     customers.value = list.items
-    settings.value = s
   } catch {
     customers.value = []
   }
@@ -60,13 +34,11 @@ async function load() {
 
 watch([() => props.range, () => props.currency], load, { immediate: true })
 
-const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
 const targetCurrency = computed(() =>
   (props.currency || settings.value?.base_currency || 'RUB').toUpperCase()
 )
-const currencySymbol = computed(() => currencySymbols[targetCurrency.value] || '₽')
 
-function toTarget(stats: CustomerStat[]): number {
+function toTarget(stats: CustomerCurrencyStats[]): number {
   const s = settings.value
   if (!s) return 0
   const base = s.base_currency
@@ -98,7 +70,7 @@ const items = computed(() => {
 })
 
 function formatAmount(n: number): string {
-  return `${n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol.value}`
+  return formatMoney(n, targetCurrency.value, { cents: true })
 }
 </script>
 

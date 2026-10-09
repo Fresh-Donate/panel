@@ -22,17 +22,6 @@ const weekRange = {
 const { load: loadWeekSummary } = useStatsSummary('stats-summary-week')
 onMounted(() => loadWeekSummary(weekRange.start, weekRange.end))
 
-const currencySymbols: Record<string, string> = {
-  RUB: '₽',
-  USD: '$',
-  EUR: '€'
-}
-
-const currencySymbol = computed(() => {
-  const code = summary.value?.currency || 'RUB'
-  return currencySymbols[code] || code
-})
-
 interface QuickAction {
   to: string
   icon: string
@@ -72,7 +61,7 @@ const quickActions: QuickAction[] = [
           :period="period"
           :range="range"
           summary-mode="today"
-          :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+          :formatter="(n) => formatMoney(n, summary?.currency || 'RUB')"
         />
         <HomeMetricChart
           title="Покупки за день"
@@ -80,7 +69,7 @@ const quickActions: QuickAction[] = [
           :period="period"
           :range="range"
           summary-mode="today"
-          :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
+          :formatter="(n) => `${formatNumber(n)} шт.`"
           color="var(--ui-success)"
         />
       </div>
