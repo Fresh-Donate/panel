@@ -5,14 +5,6 @@ export interface Range {
   end: Date
 }
 
-export interface Stat {
-  title: string
-  icon: string
-  value: number | string
-  variation: number
-  formatter?: (value: number) => string
-}
-
 export interface MetricSeries {
   current: number
   previous: number

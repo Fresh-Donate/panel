@@ -1,0 +1,35 @@
+import type { Currency } from '~/types'
+
+const CURRENCY_SYMBOLS: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
+
+export const CURRENCY_OPTIONS: { label: string, value: Currency }[] = [
+  { label: '₽ RUB', value: 'RUB' },
+  { label: '$ USD', value: 'USD' },
+  { label: '€ EUR', value: 'EUR' }
+]
+
+export function currencySymbol(code: string | null | undefined): string {
+  if (!code) return ''
+  return CURRENCY_SYMBOLS[code] ?? code
+}
+
+export function formatNumber(value: number | string): string {
+  return Number(value).toLocaleString('ru-RU')
+}
+
+export function formatMoney(value: number | string, currency: string | null | undefined, options: { cents?: boolean } = {}): string {
+  const digits = options.cents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : undefined
+  return `${Number(value).toLocaleString('ru-RU', digits)} ${currencySymbol(currency)}`.trimEnd()
+}
+
+export function formatDateTime(iso: string | null | undefined, options: { seconds?: boolean } = {}): string {
+  if (!iso) return '-'
+  return new Date(iso).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(options.seconds ? { second: '2-digit' } : {})
+  })
+}

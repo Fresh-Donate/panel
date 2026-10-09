@@ -1,5 +1,12 @@
 export type ProductType = 'item' | 'privilege' | 'currency' | 'other'
 
+export const PRODUCT_TYPES: { value: ProductType, label: string, icon: string }[] = [
+  { value: 'item', label: 'Предмет', icon: 'i-lucide-box' },
+  { value: 'privilege', label: 'Привилегия', icon: 'i-lucide-crown' },
+  { value: 'currency', label: 'Валюта', icon: 'i-lucide-coins' },
+  { value: 'other', label: 'Другое', icon: 'i-lucide-package' }
+]
+
 export type Currency = 'RUB' | 'USD' | 'EUR'
 
 export interface ProductPromotion {
