@@ -131,7 +131,10 @@ const groups = computed(() => [{
       </template>
 
       <template #footer="{ collapsed }">
-        <AppServiceVersions :collapsed="collapsed" />
+        <div class="w-full space-y-2">
+          <AppSecurityWarning :collapsed="collapsed" />
+          <AppServiceVersions :collapsed="collapsed" />
+        </div>
       </template>
     </UDashboardSidebar>
 
