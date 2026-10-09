@@ -7,14 +7,7 @@ const props = defineProps<{
 
 const minAmount = defineModel<number>('minAmount', { required: true })
 
-const currencyLabel = computed(() => {
-  switch (props.baseCurrency) {
-    case 'RUB': return '₽'
-    case 'USD': return '$'
-    case 'EUR': return '€'
-    default: return props.baseCurrency
-  }
-})
+const currencyLabel = computed(() => currencySymbol(props.baseCurrency))
 </script>
 
 <template>

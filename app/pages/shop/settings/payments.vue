@@ -1,41 +1,30 @@
 <script setup lang="ts">
 import type { PaymentProvider } from '~/types'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
+const settingsStore = useSettingsStore()
 
 const selectedProviderId = ref('yookassa')
-const providers = reactive<PaymentProvider[]>([])
+const providers = ref<PaymentProvider[]>([])
 const fetching = ref(true)
 const saving = ref(false)
-const baseCurrency = ref<string>('RUB')
+const baseCurrency = computed(() => settingsStore.settings?.base_currency ?? 'RUB')
 
 async function fetchProviders() {
   fetching.value = true
   try {
-    const [data, settings] = await Promise.all([
-      $fetch<PaymentProvider[]>('/payment-providers', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` }
-      }),
-      $fetch<{ base_currency: string }>('/settings', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` }
-      })
+    const [data] = await Promise.all([
+      api<PaymentProvider[]>('/payment-providers'),
+      settingsStore.load()
     ])
-    providers.splice(0, providers.length, ...data)
-    if (data.length > 0 && !data.find(p => p.providerId === selectedProviderId.value)) {
-      selectedProviderId.value = data[0].providerId
+    providers.value = data
+    const first = data[0]
+    if (first && !data.some(p => p.providerId === selectedProviderId.value)) {
+      selectedProviderId.value = first.providerId
     }
-    baseCurrency.value = settings.base_currency
-  } catch {
-    toast.add({
-      title: 'Ошибка загрузки',
-      description: 'Не удалось загрузить платёжные системы.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить платёжные системы.', 'Ошибка загрузки')
   } finally {
     fetching.value = false
   }
@@ -44,7 +33,7 @@ async function fetchProviders() {
 onMounted(fetchProviders)
 
 const selectedProvider = computed(() =>
-  providers.find(p => p.providerId === selectedProviderId.value)!
+  providers.value.find(p => p.providerId === selectedProviderId.value)
 )
 
 async function saveProvider() {
@@ -53,10 +42,8 @@ async function saveProvider() {
 
   saving.value = true
   try {
-    const updated = await $fetch<PaymentProvider>(`/payment-providers/${provider.providerId}`, {
-      baseURL: config.public.apiBase as string,
+    const updated = await api<PaymentProvider>(`/payment-providers/${provider.providerId}`, {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${token.value}` },
       body: {
         enabled: provider.enabled,
         testMode: provider.testMode,
@@ -68,38 +55,30 @@ async function saveProvider() {
         minAmount: provider.minAmount
       }
     })
-
-    const idx = providers.findIndex(p => p.providerId === updated.providerId)
-    if (idx !== -1) {
-      Object.assign(providers[idx], updated)
-    }
-
-    toast.add({
-      title: 'Настройки сохранены',
-      description: `Настройки ${provider.name} успешно обновлены.`,
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось сохранить настройки.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    Object.assign(provider, updated)
+    notify.success('Настройки сохранены', `Настройки ${provider.name} успешно обновлены.`)
+  } catch (err) {
+    notify.apiError(err, 'Не удалось сохранить настройки.')
   } finally {
     saving.value = false
   }
 }
 
-function setAccountCurrency(currency: string) {
-  selectedProvider.value.supportedCurrencies = [currency]
+function setEnabled(enabled: boolean) {
+  if (!selectedProvider.value) return
+  selectedProvider.value.enabled = enabled
+  saveProvider()
+}
+
+function setCredential(key: string, value: string) {
+  if (selectedProvider.value) selectedProvider.value.credentials[key] = value
 }
 
 function setCoinPackage(denomination: string, packageId: string) {
-  const config = selectedProvider.value.providerConfig || {}
-  const coinPackages = { ...(config.coinPackages || {}), [denomination]: packageId }
-  selectedProvider.value.providerConfig = { ...config, coinPackages }
+  const provider = selectedProvider.value
+  if (!provider) return
+  const config = provider.providerConfig || {}
+  provider.providerConfig = { ...config, coinPackages: { ...(config.coinPackages || {}), [denomination]: packageId } }
 }
 </script>
 
@@ -125,52 +104,52 @@ function setCoinPackage(denomination: string, packageId: string) {
       </div>
 
       <div
-        v-else-if="providers.length > 0"
+        v-else-if="selectedProvider"
         class="grid grid-cols-3 gap-6"
       >
         <!-- Left: Provider Settings -->
         <div class="space-y-6 min-w-0 col-span-2">
-          <PaymentProviderHeader
-            v-model:saving="saving"
+          <ProviderHeader
+            :saving="saving"
             :provider="selectedProvider"
-            @update:enabled="selectedProvider.enabled = $event; saveProvider()"
+            @update:enabled="setEnabled"
             @update:test-mode="selectedProvider.testMode = $event"
           />
 
           <template v-if="selectedProvider.enabled">
-            <PaymentAccountCurrencyCard
+            <ProviderAccountCurrencyCard
               :provider="selectedProvider"
-              @update:currency="setAccountCurrency"
+              @update:currency="selectedProvider.supportedCurrencies = [$event]"
             />
 
-            <PaymentCredentialsCard
+            <ProviderCredentialsCard
               :provider="selectedProvider"
-              @update:credential="(key, val) => selectedProvider.credentials[key] = val"
+              @update:credential="setCredential"
             />
 
-            <PaymentTebexCoinPackagesCard
+            <ProviderTebexCoinPackagesCard
               v-if="selectedProvider.providerId === 'tebex'"
               :provider="selectedProvider"
               @update:coin="setCoinPackage"
             />
 
-            <PaymentFiscalizationCard
+            <ProviderFiscalizationCard
               v-if="selectedProvider.providerId === 'robokassa' || selectedProvider.providerId === 'yookassa'"
               :provider="selectedProvider"
               @update:config="selectedProvider.providerConfig = $event"
             />
 
-            <PaymentCommissionPercentCard
+            <ProviderCommissionPercentCard
               v-model:commission-percent="selectedProvider.commissionPercent"
             />
 
-            <PaymentCommissionRuleCard
+            <ProviderCommissionRuleCard
               v-model:rule="selectedProvider.commissionRule"
               :commission-percent="selectedProvider.commissionPercent"
               :currency="selectedProvider.supportedCurrencies[0]"
             />
 
-            <PaymentMinAmountCard
+            <ProviderMinAmountCard
               v-model:min-amount="selectedProvider.minAmount"
               :base-currency="baseCurrency"
             />
@@ -200,7 +179,7 @@ function setCoinPackage(denomination: string, packageId: string) {
         </div>
 
         <!-- Right: Provider List -->
-        <PaymentProviderList
+        <ProviderList
           v-model:selected-id="selectedProviderId"
           :providers="providers"
         />

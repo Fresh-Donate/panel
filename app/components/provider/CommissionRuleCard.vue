@@ -26,19 +26,10 @@ const commissionModes: { value: CommissionMode, label: string, description: stri
   }
 ]
 
-const currencySymbol = computed(() => {
-  switch (props.currency) {
-    case 'RUB': return '₽'
-    case 'USD': return '$'
-    case 'EUR': return '€'
-    default: return '₽'
-  }
-})
-
 const example = computed(() => {
   const price = 100
   const comm = props.commissionPercent
-  const s = currencySymbol.value
+  const s = currencySymbol(props.currency || 'RUB')
 
   if (rule.value.mode === 'seller') {
     const receive = (price - price * comm / 100).toFixed(2)

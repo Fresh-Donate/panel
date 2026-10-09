@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { PaymentProvider } from '~/types'
+import type { FiscalizationConfig, PaymentProvider, ProviderConfig } from '~/types'
 
 const props = defineProps<{
   provider: PaymentProvider
 }>()
 
 const emit = defineEmits<{
-  'update:config': [config: Record<string, any>]
+  'update:config': [config: ProviderConfig]
 }>()
 
 const ROBOKASSA_SNO = [
@@ -80,19 +80,17 @@ const YOOKASSA_PAYMENT_SUBJECT = [
 
 const isRobokassa = computed(() => props.provider.providerId === 'robokassa')
 
-const fiscalization = computed(() => {
-  return (props.provider.providerConfig?.fiscalization || {}) as Record<string, any>
-})
+const fiscalization = computed<FiscalizationConfig>(() => props.provider.providerConfig?.fiscalization || {})
 
 const enabled = computed(() => fiscalization.value.enabled === true)
 
-function update(patch: Record<string, any>): void {
+function update(patch: FiscalizationConfig): void {
   const current = props.provider.providerConfig || {}
   const nextFc = { ...fiscalization.value, ...patch }
   emit('update:config', { ...current, fiscalization: nextFc })
 }
 
-const defaults = computed(() => {
+const defaults = computed<FiscalizationConfig>(() => {
   if (isRobokassa.value) {
     return {
       sno: 'usn_income',
@@ -110,7 +108,7 @@ const defaults = computed(() => {
 
 function setEnabled(value: boolean): void {
   if (value) {
-    update({ enabled: true, ...defaults.value, ...fiscalization.value, enabled: true })
+    update({ ...defaults.value, ...fiscalization.value, enabled: true })
   } else {
     update({ enabled: false })
   }

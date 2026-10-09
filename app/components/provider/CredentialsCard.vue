@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { PaymentProvider } from '~/types'
 
-const config = useRuntimeConfig()
-
-const url = config.public.apiBase
+const url = useRuntimeConfig().public.apiBase
 
 const props = defineProps<{
   provider: PaymentProvider
@@ -46,8 +44,7 @@ const webhookUrls: Record<string, string> = {
   cryptobot: `В @CryptoBot → Crypto Pay → My Apps → ваше приложение → Webhooks включите вебхуки и укажите URL ${url}/webhooks/cryptobot`,
   wata: `В терминале WATA укажите webhook ${url}/webhooks/wata`,
   robokassa: `В кабинете Robokassa → Технические настройки → ResultURL: ${url}/webhooks/robokassa (метод POST). Алгоритм подписи должен совпадать с настройкой в админке (по умолчанию SHA256).`,
-  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`,
-  cryptobot: `В @Cryptobot укажите webhook ${url}/webhooks/cryptobot`
+  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`
 }
 
 function getLabel(key: string): string {
