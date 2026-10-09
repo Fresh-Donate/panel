@@ -1,114 +1,33 @@
 <script setup lang="ts">
-import { z } from 'zod'
+import type { PaymentOption, PaymentProvider } from '~/types'
 
-interface PaymentOptionItem {
-  id: string
-  name: string
-  icon: string
-  providerId: string
-  redirectUrl: string | null
-  sortOrder: number
-  enabled: boolean
-}
-
-type OptionMode = 'provider' | 'redirect'
-
-interface ProviderChoice {
-  providerId: string
-  name: string
-}
-
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
+const confirm = useConfirm()
 
 const fetching = ref(true)
-const saving = ref(false)
-const options = ref<PaymentOptionItem[]>([])
-const providers = ref<ProviderChoice[]>([])
+const options = ref<PaymentOption[]>([])
+const providers = ref<{ providerId: string, name: string }[]>([])
 
-const showCreate = ref(false)
-const editingOption = ref<PaymentOptionItem | null>(null)
-const showEdit = ref(false)
+const showForm = ref(false)
+const editingOption = ref<PaymentOption | null>(null)
 
-const schema = z.object({
-  name: z.string().min(1, 'Название обязательно').max(128, 'Макс. 128 символов'),
-  icon: z.string().min(1, 'Иконка обязательна').max(128, 'Макс. 128 символов'),
-  mode: z.enum(['provider', 'redirect']),
-  providerId: z.string().max(32),
-  redirectUrl: z.string().max(1024)
-}).superRefine((d, ctx) => {
-  if (d.mode === 'provider' && !d.providerId) {
-    ctx.addIssue({ code: 'custom', path: ['providerId'], message: 'Выберите платёжную систему' })
-  }
-  if (d.mode === 'redirect' && !d.redirectUrl.trim()) {
-    ctx.addIssue({ code: 'custom', path: ['redirectUrl'], message: 'Укажите ссылку для перенаправления' })
-  }
-})
-
-interface FormState {
-  name: string
-  icon: string
-  mode: OptionMode
-  providerId: string
-  redirectUrl: string
-}
-
-const createState = reactive<FormState>({
-  name: '',
-  icon: '',
-  mode: 'provider',
-  providerId: '',
-  redirectUrl: ''
-})
-
-const editState = reactive<FormState>({
-  name: '',
-  icon: '',
-  mode: 'provider',
-  providerId: '',
-  redirectUrl: ''
-})
-
-const modeItems = [
-  { label: 'Через платёжную систему', value: 'provider' as const },
-  { label: 'Перенаправление по ссылке', value: 'redirect' as const }
-]
-
-const providerItems = computed(() =>
-  providers.value.map(p => ({ label: p.name, value: p.providerId }))
-)
-
-function getProviderName(providerId: string): string {
-  return providers.value.find(p => p.providerId === providerId)?.name || providerId
-}
-
-function describeOption(option: PaymentOptionItem): string {
-  return option.redirectUrl ? 'Перенаправление по ссылке' : getProviderName(option.providerId)
+function describeOption(option: PaymentOption): string {
+  if (option.redirectUrl) return 'Перенаправление по ссылке'
+  return providers.value.find(p => p.providerId === option.providerId)?.name || option.providerId
 }
 
 async function fetchData() {
   fetching.value = true
   try {
     const [optionsData, providersData] = await Promise.all([
-      $fetch<PaymentOptionItem[]>('/payment-options/all', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` }
-      }),
-      $fetch<ProviderChoice[]>('/payment-providers', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` }
-      })
+      api<PaymentOption[]>('/payment-options/all'),
+      api<PaymentProvider[]>('/payment-providers')
     ])
     options.value = optionsData
     providers.value = providersData.map(p => ({ providerId: p.providerId, name: p.name }))
-  } catch {
-    toast.add({
-      title: 'Ошибка загрузки',
-      description: 'Не удалось загрузить данные.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить данные.', 'Ошибка загрузки')
   } finally {
     fetching.value = false
   }
@@ -117,134 +36,50 @@ async function fetchData() {
 onMounted(fetchData)
 
 function openCreate() {
-  createState.name = ''
-  createState.icon = ''
-  createState.mode = 'provider'
-  createState.providerId = providers.value[0]?.providerId || ''
-  createState.redirectUrl = ''
-  showCreate.value = true
+  editingOption.value = null
+  showForm.value = true
 }
 
-function openEdit(option: PaymentOptionItem) {
+function openEdit(option: PaymentOption) {
   editingOption.value = option
-  editState.name = option.name
-  editState.icon = option.icon
-  editState.mode = option.redirectUrl ? 'redirect' : 'provider'
-  editState.providerId = option.providerId
-  editState.redirectUrl = option.redirectUrl ?? ''
-  showEdit.value = true
+  showForm.value = true
 }
 
-function buildPayload(s: FormState) {
-  return {
-    name: s.name,
-    icon: s.icon,
-    providerId: s.mode === 'provider' ? s.providerId : '',
-    redirectUrl: s.mode === 'redirect' ? s.redirectUrl.trim() : null
-  }
+function upsert(saved: PaymentOption) {
+  const idx = options.value.findIndex(o => o.id === saved.id)
+  if (idx === -1) options.value.push(saved)
+  else options.value[idx] = saved
 }
 
-async function onCreate() {
-  saving.value = true
+function onSaved(saved: PaymentOption) {
+  upsert(saved)
+  showForm.value = false
+}
+
+async function toggleEnabled(option: PaymentOption) {
   try {
-    const created = await $fetch<PaymentOptionItem>('/payment-options', {
-      baseURL: config.public.apiBase as string,
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: buildPayload(createState)
-    })
-    options.value.push(created)
-    showCreate.value = false
-    toast.add({
-      title: 'Метод добавлен',
-      description: `"${created.name}" успешно создан.`,
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось создать метод оплаты.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
-  } finally {
-    saving.value = false
-  }
-}
-
-async function onEdit() {
-  if (!editingOption.value) return
-  saving.value = true
-  try {
-    const updated = await $fetch<PaymentOptionItem>(`/payment-options/${editingOption.value.id}`, {
-      baseURL: config.public.apiBase as string,
+    upsert(await api<PaymentOption>(`/payment-options/${option.id}`, {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: buildPayload(editState)
-    })
-    const idx = options.value.findIndex(o => o.id === updated.id)
-    if (idx !== -1) options.value[idx] = updated
-    showEdit.value = false
-    toast.add({
-      title: 'Метод обновлён',
-      description: `"${updated.name}" успешно сохранён.`,
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось обновить метод оплаты.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
-  } finally {
-    saving.value = false
-  }
-}
-
-async function toggleEnabled(option: PaymentOptionItem) {
-  try {
-    const updated = await $fetch<PaymentOptionItem>(`/payment-options/${option.id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token.value}` },
       body: { enabled: !option.enabled }
-    })
-    const idx = options.value.findIndex(o => o.id === updated.id)
-    if (idx !== -1) options.value[idx] = updated
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось изменить статус.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    }))
+  } catch (err) {
+    notify.apiError(err, 'Не удалось изменить статус.')
   }
 }
 
-async function deleteOption(option: PaymentOptionItem) {
+async function deleteOption(option: PaymentOption) {
+  const confirmed = await confirm({
+    title: `Удалить метод «${option.name}»?`,
+    description: 'Покупатели больше не увидят этот вариант оплаты.',
+    confirmLabel: 'Удалить'
+  })
+  if (!confirmed) return
   try {
-    await $fetch(`/payment-options/${option.id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
+    await api(`/payment-options/${option.id}`, { method: 'DELETE' })
     options.value = options.value.filter(o => o.id !== option.id)
-    toast.add({
-      title: 'Метод удалён',
-      description: `"${option.name}" удалён.`,
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось удалить метод оплаты.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    notify.success('Метод удалён', `"${option.name}" удалён.`)
+  } catch (err) {
+    notify.apiError(err, 'Не удалось удалить метод оплаты.')
   }
 }
 </script>
@@ -367,225 +202,12 @@ async function deleteOption(option: PaymentOptionItem) {
         </UPageCard>
       </div>
 
-      <!-- Create Slideover -->
-      <USlideover
-        v-model:open="showCreate"
-        title="Новый метод оплаты"
-        description="Добавьте новый вариант оплаты для покупателей."
-      >
-        <template #body>
-          <UForm
-            :schema="schema"
-            :state="createState"
-            class="space-y-5"
-            @submit="onCreate"
-          >
-            <UFormField
-              label="Название"
-              name="name"
-              description="Текст на кнопке в магазине."
-              required
-            >
-              <UInput
-                v-model="createState.name"
-                placeholder="Российские карты и СБП"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              label="Иконка"
-              name="icon"
-              description="Название иконки Lucide (например i-lucide-credit-card)."
-              required
-            >
-              <UInput
-                v-model="createState.icon"
-                placeholder="i-lucide-credit-card"
-                class="w-full"
-              />
-              <div
-                v-if="createState.icon"
-                class="flex items-center gap-2 mt-2 text-sm text-muted"
-              >
-                <span>Предпросмотр:</span>
-                <UIcon
-                  :name="createState.icon"
-                  class="size-5"
-                />
-              </div>
-            </UFormField>
-
-            <UFormField
-              label="Тип обработки"
-              name="mode"
-              description="Через подключённую платёжную систему или редиректом по произвольной ссылке."
-              required
-            >
-              <USelectMenu
-                v-model="createState.mode"
-                :items="modeItems"
-                value-key="value"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="createState.mode === 'provider'"
-              label="Платёжная система"
-              name="providerId"
-              description="Какая платёжная система будет обрабатывать оплату."
-              required
-            >
-              <USelectMenu
-                v-model="createState.providerId"
-                :items="providerItems"
-                value-key="value"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-else
-              label="Ссылка для перенаправления"
-              name="redirectUrl"
-              description="Доступные плейсхолдеры: {nickname}, {email}, {amount}, {price}, {currency}, {product}, {count}, {productId}."
-              required
-            >
-              <UInput
-                v-model="createState.redirectUrl"
-                placeholder="https://example.com/pay?sum={amount}&user={nickname}"
-                class="w-full"
-              />
-            </UFormField>
-
-            <div class="flex justify-end gap-3 pt-2">
-              <UButton
-                label="Отмена"
-                variant="ghost"
-                color="neutral"
-                @click="showCreate = false"
-              />
-              <UButton
-                type="submit"
-                label="Создать"
-                icon="i-lucide-plus"
-                :loading="saving"
-              />
-            </div>
-          </UForm>
-        </template>
-      </USlideover>
-
-      <!-- Edit Slideover -->
-      <USlideover
-        v-model:open="showEdit"
-        title="Редактирование метода оплаты"
-        description="Измените настройки метода оплаты."
-      >
-        <template #body>
-          <UForm
-            :schema="schema"
-            :state="editState"
-            class="space-y-5"
-            @submit="onEdit"
-          >
-            <UFormField
-              label="Название"
-              name="name"
-              description="Текст на кнопке в магазине."
-              required
-            >
-              <UInput
-                v-model="editState.name"
-                placeholder="Российские карты и СБП"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              label="Иконка"
-              name="icon"
-              description="Название иконки Lucide (например i-lucide-credit-card)."
-              required
-            >
-              <UInput
-                v-model="editState.icon"
-                placeholder="i-lucide-credit-card"
-                class="w-full"
-              />
-              <div
-                v-if="editState.icon"
-                class="flex items-center gap-2 mt-2 text-sm text-muted"
-              >
-                <span>Предпросмотр:</span>
-                <UIcon
-                  :name="editState.icon"
-                  class="size-5"
-                />
-              </div>
-            </UFormField>
-
-            <UFormField
-              label="Тип обработки"
-              name="mode"
-              description="Через подключённую платёжную систему или редиректом по произвольной ссылке."
-              required
-            >
-              <USelectMenu
-                v-model="editState.mode"
-                :items="modeItems"
-                value-key="value"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="editState.mode === 'provider'"
-              label="Платёжная система"
-              name="providerId"
-              description="Какая платёжная система будет обрабатывать оплату."
-              required
-            >
-              <USelectMenu
-                v-model="editState.providerId"
-                :items="providerItems"
-                value-key="value"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-else
-              label="Ссылка для перенаправления"
-              name="redirectUrl"
-              description="Доступные плейсхолдеры: {nickname}, {email}, {amount}, {price}, {currency}, {product}, {count}, {productId}."
-              required
-            >
-              <UInput
-                v-model="editState.redirectUrl"
-                placeholder="https://example.com/pay?sum={amount}&user={nickname}"
-                class="w-full"
-              />
-            </UFormField>
-
-            <div class="flex justify-end gap-3 pt-2">
-              <UButton
-                label="Отмена"
-                variant="ghost"
-                color="neutral"
-                @click="showEdit = false"
-              />
-              <UButton
-                type="submit"
-                label="Сохранить"
-                icon="i-lucide-save"
-                :loading="saving"
-              />
-            </div>
-          </UForm>
-        </template>
-      </USlideover>
+      <PaymentOptionFormSlideover
+        v-model:open="showForm"
+        :option="editingOption"
+        :providers="providers"
+        @saved="onSaved"
+      />
     </template>
   </UDashboardPanel>
 </template>

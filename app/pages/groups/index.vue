@@ -1,51 +1,35 @@
 <script setup lang="ts">
-import type { Product, Group } from '~/types'
+import type { Group } from '~/types'
 import type { TableColumn } from '@nuxt/ui'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
+const confirm = useConfirm()
+const productsStore = useProductsStore()
+const { items: products, nameById: productNameById } = storeToRefs(productsStore)
 
-const showCreate = ref(false)
-const showEdit = ref(false)
+const showForm = ref(false)
 const editing = ref<Group | null>(null)
 
 const groups = ref<Group[]>([])
-const products = ref<Product[]>([])
 const loading = ref(true)
-
-function authHeaders() {
-  return { Authorization: `Bearer ${token.value}` }
-}
 
 async function fetchAll() {
   loading.value = true
   try {
-    const [groupsList, prods] = await Promise.all([
-      $fetch<Group[]>('/groups', {
-        baseURL: config.public.apiBase as string,
-        headers: authHeaders()
-      }),
-      $fetch<Product[]>('/products', {
-        baseURL: config.public.apiBase as string
-      })
+    const [groupsList] = await Promise.all([
+      api<Group[]>('/groups'),
+      productsStore.load()
     ])
     groups.value = groupsList
-    products.value = prods
-  } catch {
-    toast.add({ title: 'Ошибка загрузки', icon: 'i-lucide-alert-circle', color: 'error' })
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить группы.', 'Ошибка загрузки')
   } finally {
     loading.value = false
   }
 }
 
 onMounted(fetchAll)
-
-const productNameById = computed(() => {
-  const map = new Map<string, string>()
-  for (const p of products.value) map.set(p.id, p.name)
-  return map
-})
 
 const columns: TableColumn<Group>[] = [
   { accessorKey: 'name', header: 'Название' },
@@ -54,29 +38,37 @@ const columns: TableColumn<Group>[] = [
   { accessorKey: 'actions', header: '' }
 ]
 
-async function deleteGroup(id: string) {
+async function deleteGroup(group: Group) {
+  const confirmed = await confirm({
+    title: `Удалить группу «${group.name}»?`,
+    description: 'Товары из группы останутся, но правила доплаты для них перестанут действовать.',
+    confirmLabel: 'Удалить'
+  })
+  if (!confirmed) return
   try {
-    await $fetch(`/groups/${id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'DELETE',
-      headers: authHeaders()
-    })
-    groups.value = groups.value.filter(g => g.id !== id)
-    toast.add({ title: 'Группа удалена', icon: 'i-lucide-trash-2', color: 'success' })
-  } catch {
-    toast.add({ title: 'Ошибка', description: 'Не удалось удалить группу.', icon: 'i-lucide-alert-circle', color: 'error' })
+    await api(`/groups/${group.id}`, { method: 'DELETE' })
+    groups.value = groups.value.filter(g => g.id !== group.id)
+    notify.success('Группа удалена', undefined, 'i-lucide-trash-2')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось удалить группу.')
   }
 }
 
-function openEdit(group: Group) {
-  editing.value = { ...group, productIds: [...group.productIds] }
-  showEdit.value = true
+function openCreate() {
+  editing.value = null
+  showForm.value = true
 }
 
-function onUpdated(updated: Group) {
-  const idx = groups.value.findIndex(g => g.id === updated.id)
-  if (idx !== -1) groups.value[idx] = updated
-  showEdit.value = false
+function openEdit(group: Group) {
+  editing.value = group
+  showForm.value = true
+}
+
+function onSaved(saved: Group) {
+  const idx = groups.value.findIndex(g => g.id === saved.id)
+  if (idx === -1) groups.value.unshift(saved)
+  else groups.value[idx] = saved
+  showForm.value = false
 }
 
 function getActions(group: Group) {
@@ -88,7 +80,7 @@ function getActions(group: Group) {
     label: 'Удалить',
     icon: 'i-lucide-trash-2',
     color: 'error' as const,
-    onSelect: () => deleteGroup(group.id)
+    onSelect: () => deleteGroup(group)
   }]]
 }
 </script>
@@ -105,7 +97,7 @@ function getActions(group: Group) {
           <UButton
             label="Создать группу"
             icon="i-lucide-plus"
-            @click="showCreate = true"
+            @click="openCreate"
           />
         </template>
       </UDashboardNavbar>
@@ -213,24 +205,17 @@ function getActions(group: Group) {
             label="Создать первую группу"
             icon="i-lucide-plus"
             class="mt-4"
-            @click="showCreate = true"
+            @click="openCreate"
           />
         </div>
       </template>
     </template>
   </UDashboardPanel>
 
-  <GroupCreateSlideover
-    v-model:open="showCreate"
-    :products="products"
-    @created="(g: Group) => { groups.unshift(g); showCreate = false }"
-  />
-
-  <GroupEditSlideover
-    v-if="editing"
-    v-model:open="showEdit"
+  <GroupFormSlideover
+    v-model:open="showForm"
     :group="editing"
     :products="products"
-    @updated="onUpdated"
+    @saved="onSaved"
   />
 </template>

@@ -1,22 +1,26 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import type { Product, Promotion } from '~/types'
-import { isoToLocalInputValue, localInputToIso } from '~/utils/datetime'
 
 const props = defineProps<{
-  promotion: Promotion
+  promotion?: Promotion | null
   products: Product[]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{
-  updated: [promotion: Promotion]
+  saved: [promotion: Promotion]
 }>()
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-const toast = useToast()
+const api = useApi()
+const notify = useNotify()
 const loading = ref(false)
+
+const isEdit = computed(() => !!props.promotion)
+
+function close() {
+  open.value = false
+}
 
 const schema = z.object({
   name: z.string().min(1, 'Название обязательно').max(128, 'Макс. 128 символов'),
@@ -31,22 +35,30 @@ const schema = z.object({
 
 type FormState = z.input<typeof schema>
 
-const state = reactive<FormState>({
-  name: '',
-  discountPercent: 10,
-  startsAt: '',
-  endsAt: '',
-  productIds: []
-})
-
-watch(() => props.promotion, (p) => {
+function stateFrom(p?: Promotion | null): FormState {
   if (p) {
-    state.name = p.name
-    state.discountPercent = p.discountPercent
-    state.startsAt = isoToLocalInputValue(p.startsAt)
-    state.endsAt = isoToLocalInputValue(p.endsAt)
-    state.productIds = [...p.productIds]
+    return {
+      name: p.name,
+      discountPercent: p.discountPercent,
+      startsAt: isoToLocalInputValue(p.startsAt),
+      endsAt: isoToLocalInputValue(p.endsAt),
+      productIds: [...p.productIds]
+    }
   }
+  const now = new Date()
+  return {
+    name: '',
+    discountPercent: 10,
+    startsAt: toLocalInputValue(now),
+    endsAt: toLocalInputValue(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
+    productIds: []
+  }
+}
+
+const state = reactive<FormState>(stateFrom())
+
+watch(open, (val) => {
+  if (val) Object.assign(state, stateFrom(props.promotion))
 }, { immediate: true })
 
 const productItems = computed(() =>
@@ -56,32 +68,21 @@ const productItems = computed(() =>
 async function onSubmit() {
   loading.value = true
   try {
-    const updated = await $fetch<Promotion>(`/promotions/${props.promotion.id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: {
-        name: state.name,
-        discountPercent: state.discountPercent,
-        startsAt: localInputToIso(state.startsAt),
-        endsAt: localInputToIso(state.endsAt),
-        productIds: state.productIds
-      }
-    })
+    const body = {
+      name: state.name,
+      discountPercent: state.discountPercent,
+      startsAt: localInputToIso(state.startsAt),
+      endsAt: localInputToIso(state.endsAt),
+      productIds: state.productIds
+    }
+    const saved = props.promotion
+      ? await api<Promotion>(`/promotions/${props.promotion.id}`, { method: 'PUT', body })
+      : await api<Promotion>('/promotions', { method: 'POST', body })
 
-    emit('updated', updated)
-    toast.add({
-      title: 'Акция обновлена',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось обновить акцию.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    emit('saved', saved)
+    notify.success(isEdit.value ? 'Акция обновлена' : 'Акция создана', `"${saved.name}" сохранена.`)
+  } catch (err) {
+    notify.apiError(err, isEdit.value ? 'Не удалось обновить акцию.' : 'Не удалось создать акцию.')
   } finally {
     loading.value = false
   }
@@ -91,8 +92,10 @@ async function onSubmit() {
 <template>
   <USlideover
     v-model:open="open"
-    title="Редактирование акции"
-    description="Изменения вступают в силу сразу - обновлённая цена появится в магазине."
+    :title="isEdit ? 'Редактирование акции' : 'Новая акция'"
+    :description="isEdit
+      ? 'Изменения вступают в силу сразу - обновлённая цена появится в магазине.'
+      : 'Скидка действует на выбранные товары в указанный период.'"
   >
     <template #body>
       <UForm
@@ -108,6 +111,7 @@ async function onSubmit() {
         >
           <UInput
             v-model="state.name"
+            placeholder="Чёрная пятница, Запуск сервера..."
             class="w-full"
           />
         </UFormField>
@@ -156,6 +160,7 @@ async function onSubmit() {
         <UFormField
           label="Товары"
           name="productIds"
+          :description="isEdit ? undefined : 'Оставьте пустым, чтобы создать акцию без товаров (можно добавить позже).'"
         >
           <USelectMenu
             v-model="state.productIds"
@@ -173,12 +178,12 @@ async function onSubmit() {
             label="Отмена"
             variant="ghost"
             color="neutral"
-            @click="open = false"
+            @click="close"
           />
           <UButton
             type="submit"
-            label="Сохранить"
-            icon="i-lucide-save"
+            :label="isEdit ? 'Сохранить' : 'Создать акцию'"
+            :icon="isEdit ? 'i-lucide-save' : 'i-lucide-tag'"
             :loading="loading"
           />
         </div>

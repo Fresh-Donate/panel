@@ -1,80 +1,39 @@
 <script setup lang="ts">
-import type { Product, ProductType, Currency, Server } from '~/types'
+import { PRODUCT_TYPES } from '~/types'
+import type { Product, ProductType, Server } from '~/types'
 import type { TableColumn } from '@nuxt/ui'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
+const confirm = useConfirm()
+const productsStore = useProductsStore()
+const settingsStore = useSettingsStore()
+const { items: products } = storeToRefs(productsStore)
 
-const showCreate = ref(false)
-const showEdit = ref(false)
+const showForm = ref(false)
 const editingProduct = ref<Product | null>(null)
 const showCreateGroup = ref(false)
 
-function authHeaders() {
-  return { Authorization: `Bearer ${token.value}` }
-}
-
-const productTypes: { value: ProductType, label: string, icon: string }[] = [
-  { value: 'item', label: 'Предмет', icon: 'i-lucide-box' },
-  { value: 'privilege', label: 'Привилегия', icon: 'i-lucide-crown' },
-  { value: 'currency', label: 'Валюта', icon: 'i-lucide-coins' },
-  { value: 'other', label: 'Другое', icon: 'i-lucide-package' }
-]
-
-const currencies: { value: Currency, label: string }[] = [
-  { value: 'RUB', label: '₽ RUB' },
-  { value: 'USD', label: '$ USD' },
-  { value: 'EUR', label: '€ EUR' }
-]
-
-function getTypeLabel(type: ProductType) {
-  return productTypes.find(t => t.value === type)?.label ?? type
-}
-
-function getTypeIcon(type: ProductType) {
-  return productTypes.find(t => t.value === type)?.icon ?? 'i-lucide-package'
-}
-
-function getCurrencySymbol(currency: Currency) {
-  const map: Record<Currency, string> = { RUB: '₽', USD: '$', EUR: '€' }
-  return map[currency] ?? currency
-}
-
-const products = ref<Product[]>([])
 const servers = ref<Server[]>([])
 const multiServerEnabled = ref(false)
 const loading = ref(true)
 
-async function fetchProducts() {
-  products.value = await $fetch<Product[]>('/products', {
-    baseURL: config.public.apiBase as string,
-    headers: authHeaders()
-  })
+function typeOf(type: ProductType) {
+  return PRODUCT_TYPES.find(t => t.value === type)
 }
 
 async function fetchMultiServerContext() {
-  const settings = await $fetch<{ multi_server_enabled: boolean }>('/settings', {
-    baseURL: config.public.apiBase as string,
-    headers: authHeaders()
-  })
+  const settings = await settingsStore.load()
   multiServerEnabled.value = settings.multi_server_enabled
-  if (settings.multi_server_enabled) {
-    servers.value = await $fetch<Server[]>('/servers', {
-      baseURL: config.public.apiBase as string,
-      headers: authHeaders()
-    })
-  } else {
-    servers.value = []
-  }
+  servers.value = settings.multi_server_enabled ? await api<Server[]>('/servers') : []
 }
 
 async function fetchAll() {
   loading.value = true
   try {
-    await Promise.all([fetchProducts(), fetchMultiServerContext()])
-  } catch {
-    toast.add({ title: 'Ошибка загрузки', description: 'Не удалось загрузить товары.', icon: 'i-lucide-alert-circle', color: 'error' })
+    await Promise.all([productsStore.load(), fetchMultiServerContext()])
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить товары.', 'Ошибка загрузки')
   } finally {
     loading.value = false
   }
@@ -86,13 +45,10 @@ const search = ref('')
 const filterType = ref<ProductType | 'all'>('all')
 
 const filteredProducts = computed(() => {
+  const q = search.value.toLowerCase()
   return products.value.filter((p) => {
     if (filterType.value !== 'all' && p.type !== filterType.value) return false
-    if (search.value) {
-      const q = search.value.toLowerCase()
-      return p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
-    }
-    return true
+    return !q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
   })
 })
 
@@ -105,43 +61,51 @@ const columns: TableColumn<Product>[] = [
   { accessorKey: 'actions', header: '' }
 ]
 
-async function deleteProduct(id: string) {
+async function deleteProduct(product: Product) {
+  const confirmed = await confirm({
+    title: `Удалить товар «${product.name}»?`,
+    description: 'Товар исчезнет из магазина. История платежей по нему сохранится.',
+    confirmLabel: 'Удалить'
+  })
+  if (!confirmed) return
   try {
-    await $fetch(`/products/${id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'DELETE',
-      headers: authHeaders()
-    })
-    products.value = products.value.filter(p => p.id !== id)
-    toast.add({ title: 'Товар удалён', icon: 'i-lucide-trash-2', color: 'success' })
-  } catch {
-    toast.add({ title: 'Ошибка', description: 'Не удалось удалить товар.', icon: 'i-lucide-alert-circle', color: 'error' })
+    await productsStore.remove(product.id)
+    notify.success('Товар удалён', undefined, 'i-lucide-trash-2')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось удалить товар.')
   }
 }
 
 async function duplicateProduct(id: string) {
   try {
-    const duplicated = await $fetch<Product>(`/products/${id}/duplicate`, {
-      baseURL: config.public.apiBase as string,
-      method: 'POST',
-      headers: authHeaders()
-    })
-    products.value.unshift(duplicated)
-    toast.add({ title: 'Товар дублирован', icon: 'i-lucide-copy', color: 'success' })
-  } catch {
-    toast.add({ title: 'Ошибка', description: 'Не удалось дублировать товар.', icon: 'i-lucide-alert-circle', color: 'error' })
+    await productsStore.duplicate(id)
+    notify.success('Товар дублирован', undefined, 'i-lucide-copy')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось дублировать товар.')
   }
 }
 
-function openEdit(product: Product) {
-  editingProduct.value = { ...product }
-  showEdit.value = true
+function openCreate() {
+  editingProduct.value = null
+  showForm.value = true
 }
 
-function onUpdated(updated: Product) {
-  const idx = products.value.findIndex(p => p.id === updated.id)
-  if (idx !== -1) products.value[idx] = updated
-  showEdit.value = false
+function openCreateGroup() {
+  showCreateGroup.value = true
+}
+
+function setFilter(type: ProductType | 'all') {
+  filterType.value = type
+}
+
+function openEdit(product: Product) {
+  editingProduct.value = product
+  showForm.value = true
+}
+
+function onSaved(product: Product) {
+  productsStore.upsert(product)
+  showForm.value = false
 }
 
 function getActions(product: Product) {
@@ -157,7 +121,7 @@ function getActions(product: Product) {
     label: 'Удалить',
     icon: 'i-lucide-trash-2',
     color: 'error' as const,
-    onSelect: () => deleteProduct(product.id)
+    onSelect: () => deleteProduct(product)
   }]]
 }
 </script>
@@ -176,12 +140,12 @@ function getActions(product: Product) {
             icon="i-lucide-layers"
             color="neutral"
             variant="soft"
-            @click="showCreateGroup = true"
+            @click="openCreateGroup"
           />
           <UButton
             label="Добавить товар"
             icon="i-lucide-plus"
-            @click="showCreate = true"
+            @click="openCreate"
           />
         </template>
       </UDashboardNavbar>
@@ -213,17 +177,17 @@ function getActions(product: Product) {
               :variant="filterType === 'all' ? 'solid' : 'soft'"
               :color="filterType === 'all' ? 'primary' : 'neutral'"
               size="sm"
-              @click="filterType = 'all'"
+              @click="setFilter('all')"
             />
             <UButton
-              v-for="pt in productTypes"
+              v-for="pt in PRODUCT_TYPES"
               :key="pt.value"
               :label="pt.label"
               :icon="pt.icon"
               :variant="filterType === pt.value ? 'solid' : 'soft'"
               :color="filterType === pt.value ? 'primary' : 'neutral'"
               size="sm"
-              @click="filterType = pt.value"
+              @click="setFilter(pt.value)"
             />
           </div>
         </div>
@@ -237,7 +201,7 @@ function getActions(product: Product) {
             <div class="flex items-center gap-3">
               <div class="size-10 rounded-lg bg-elevated border border-default flex items-center justify-center shrink-0">
                 <UIcon
-                  :name="getTypeIcon(row.original.type)"
+                  :name="typeOf(row.original.type)?.icon ?? 'i-lucide-package'"
                   class="size-5 text-primary"
                 />
               </div>
@@ -254,7 +218,7 @@ function getActions(product: Product) {
 
           <template #type-cell="{ row }">
             <UBadge
-              :label="getTypeLabel(row.original.type)"
+              :label="typeOf(row.original.type)?.label ?? row.original.type"
               variant="subtle"
               size="sm"
             />
@@ -262,13 +226,13 @@ function getActions(product: Product) {
 
           <template #price-cell="{ row }">
             <span class="font-semibold tabular-nums">
-              {{ row.original.price.toLocaleString() }} {{ getCurrencySymbol(row.original.currency) }}
+              {{ formatMoney(row.original.price, row.original.currency) }}
             </span>
           </template>
 
           <template #quantity-cell="{ row }">
             <span class="tabular-nums text-muted">
-              × {{ row.original.quantity.toLocaleString() }}
+              × {{ formatNumber(row.original.quantity) }}
             </span>
           </template>
 
@@ -324,36 +288,24 @@ function getActions(product: Product) {
             label="Создать первый товар"
             icon="i-lucide-plus"
             class="mt-4"
-            @click="showCreate = true"
+            @click="openCreate"
           />
         </div>
       </template>
     </template>
   </UDashboardPanel>
 
-  <ProductCreateSlideover
-    v-model:open="showCreate"
-    :product-types="productTypes"
-    :currencies="currencies"
-    :servers="servers"
-    :multi-server-enabled="multiServerEnabled"
-    @created="(p: Product) => { products.unshift(p); showCreate = false }"
-  />
-
-  <ProductEditSlideover
-    v-if="editingProduct"
-    v-model:open="showEdit"
+  <ProductFormSlideover
+    v-model:open="showForm"
     :product="editingProduct"
-    :product-types="productTypes"
-    :currencies="currencies"
     :servers="servers"
     :multi-server-enabled="multiServerEnabled"
-    @updated="onUpdated"
+    @saved="onSaved"
   />
 
-  <GroupCreateSlideover
+  <GroupFormSlideover
     v-model:open="showCreateGroup"
     :products="products"
-    @created="() => { showCreateGroup = false; fetchAll() }"
+    @saved="() => { showCreateGroup = false; fetchAll() }"
   />
 </template>

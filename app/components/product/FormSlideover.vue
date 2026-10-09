@@ -1,32 +1,36 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import type { Product, ProductType, Currency, Server } from '~/types'
+import { PRODUCT_TYPES } from '~/types'
+import type { Product, ProductType, Server } from '~/types'
 
 const props = defineProps<{
-  product: Product
-  productTypes: { value: ProductType, label: string, icon: string }[]
-  currencies: { value: Currency, label: string }[]
+  product?: Product | null
   servers?: Server[]
   multiServerEnabled?: boolean
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{
-  updated: [product: Product]
+  saved: [product: Product]
 }>()
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-const toast = useToast()
+const api = useApi()
+const notify = useNotify()
 const loading = ref(false)
+
+const isEdit = computed(() => !!props.product)
+
+function close() {
+  open.value = false
+}
 
 const schema = z.object({
   name: z.string().min(1, 'Название обязательно').max(128, 'Макс. 128 символов'),
   price: z.number().min(0.01, 'Цена должна быть больше 0'),
-  currency: z.string().min(1, 'Выберите валюту'),
+  currency: z.enum(['RUB', 'USD', 'EUR'], 'Выберите валюту'),
   quantity: z.number().int().min(0, 'Минимум 0'),
   description: z.string().max(1000, 'Макс. 1000 символов').optional(),
-  type: z.string().min(1, 'Выберите тип'),
+  type: z.enum(['item', 'privilege', 'currency', 'other'], 'Выберите тип'),
   commands: z.string().optional(),
   allowCustomCount: z.boolean(),
   forceDelivery: z.boolean(),
@@ -35,35 +39,28 @@ const schema = z.object({
 
 type FormState = z.input<typeof schema>
 
-const state = reactive<FormState>({
-  name: '',
-  price: 0,
-  currency: 'RUB',
-  quantity: 1,
-  description: '',
-  type: 'item',
-  commands: '',
-  allowCustomCount: false,
-  forceDelivery: false,
-  imageUrl: ''
-})
+function stateFrom(p?: Product | null): FormState {
+  return {
+    name: p?.name ?? '',
+    price: p?.price ?? 0,
+    currency: p?.currency ?? 'RUB',
+    quantity: p?.quantity ?? 1,
+    description: p?.description ?? '',
+    type: p?.type ?? 'item',
+    commands: p?.commands?.join('\n') ?? '',
+    allowCustomCount: p?.allowCustomCount ?? false,
+    forceDelivery: p?.forceDelivery ?? false,
+    imageUrl: p?.imageUrl ?? ''
+  }
+}
 
+const state = reactive<FormState>(stateFrom())
 const selectedServerIds = ref<string[]>([])
 
-watch(() => props.product, (p) => {
-  if (p) {
-    state.name = p.name
-    state.price = p.price
-    state.currency = p.currency
-    state.quantity = p.quantity
-    state.description = p.description || ''
-    state.type = p.type
-    state.commands = p.commands?.join('\n') || ''
-    state.allowCustomCount = p.allowCustomCount || false
-    state.forceDelivery = p.forceDelivery || false
-    state.imageUrl = p.imageUrl || ''
-    selectedServerIds.value = [...(p.serverIds || [])]
-  }
+watch(open, (val) => {
+  if (!val) return
+  Object.assign(state, stateFrom(props.product))
+  selectedServerIds.value = [...(props.product?.serverIds ?? [])]
 }, { immediate: true })
 
 const forceDeliveryLocked = computed(() => selectedServerIds.value.length >= 2)
@@ -98,49 +95,34 @@ const quantityLabels: Record<ProductType, { label: string, description: string }
   other: { label: 'Количество', description: 'Количество единиц за одну покупку.' }
 }
 
-const commandHint = computed(() => commandHints[state.type as ProductType] ?? '')
-const commandPlaceholder = computed(() => commandPlaceholders[state.type as ProductType] ?? '')
-const qLabel = computed(() => quantityLabels[state.type as ProductType] ?? quantityLabels.other)
-
-const typeItems = computed(() => props.productTypes.map(t => ({ label: t.label, value: t.value })))
-const currencyItems = computed(() => props.currencies.map(c => ({ label: c.label, value: c.value })))
+const commandHint = computed(() => commandHints[state.type])
+const commandPlaceholder = computed(() => commandPlaceholders[state.type])
+const qLabel = computed(() => quantityLabels[state.type])
 
 async function onSubmit() {
   loading.value = true
   try {
-    const updated = await $fetch<Product>(`/products/${props.product.id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: {
-        name: state.name,
-        price: state.price,
-        currency: state.currency,
-        quantity: state.type === 'privilege' ? 1 : state.quantity,
-        description: state.description || '',
-        type: state.type,
-        commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
-        allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
-        forceDelivery: state.forceDelivery,
-        imageUrl: state.imageUrl || '',
-        serverIds: props.multiServerEnabled ? selectedServerIds.value : undefined
-      }
-    })
+    const body = {
+      name: state.name,
+      price: state.price,
+      currency: state.currency,
+      quantity: state.type === 'privilege' ? 1 : state.quantity,
+      description: state.description || '',
+      type: state.type,
+      commands: state.commands ? state.commands.split('\n').filter(Boolean) : [],
+      allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
+      forceDelivery: state.forceDelivery,
+      imageUrl: state.imageUrl || '',
+      serverIds: props.multiServerEnabled ? selectedServerIds.value : undefined
+    }
+    const saved = props.product
+      ? await api<Product>(`/products/${props.product.id}`, { method: 'PUT', body })
+      : await api<Product>('/products', { method: 'POST', body })
 
-    emit('updated', updated)
-    toast.add({
-      title: 'Товар обновлён',
-      description: `"${updated.name}" успешно сохранён.`,
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось обновить товар.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    emit('saved', saved)
+    notify.success(isEdit.value ? 'Товар обновлён' : 'Товар создан', `"${saved.name}" успешно сохранён.`)
+  } catch (err) {
+    notify.apiError(err, isEdit.value ? 'Не удалось обновить товар.' : 'Не удалось создать товар.')
   } finally {
     loading.value = false
   }
@@ -150,8 +132,8 @@ async function onSubmit() {
 <template>
   <USlideover
     v-model:open="open"
-    title="Редактирование товара"
-    description="Измените информацию о товаре."
+    :title="isEdit ? 'Редактирование товара' : 'Новый товар'"
+    :description="isEdit ? 'Измените информацию о товаре.' : 'Заполните информацию о товаре.'"
   >
     <template #body>
       <UForm
@@ -167,7 +149,7 @@ async function onSubmit() {
         >
           <USelectMenu
             v-model="state.type"
-            :items="typeItems"
+            :items="PRODUCT_TYPES"
             value-key="value"
             class="w-full"
           />
@@ -209,7 +191,7 @@ async function onSubmit() {
           >
             <USelectMenu
               v-model="state.currency"
-              :items="currencyItems"
+              :items="CURRENCY_OPTIONS"
               value-key="value"
               class="w-full"
             />
@@ -235,7 +217,7 @@ async function onSubmit() {
         <UFormField
           v-if="state.type !== 'privilege'"
           label="Пользовательское количество"
-          name="description"
+          name="allowCustomCount"
           description="Разрешить пользователю ввод количества желаемого товара."
           required
         >
@@ -326,12 +308,12 @@ async function onSubmit() {
             label="Отмена"
             variant="ghost"
             color="neutral"
-            @click="open = false"
+            @click="close"
           />
           <UButton
             type="submit"
-            label="Сохранить"
-            icon="i-lucide-save"
+            :label="isEdit ? 'Сохранить' : 'Создать товар'"
+            :icon="isEdit ? 'i-lucide-save' : 'i-lucide-plus'"
             :loading="loading"
           />
         </div>
