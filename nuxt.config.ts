@@ -26,6 +26,12 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2025-07-15',
 
+  typescript: {
+    tsConfig: {
+      vueCompilerOptions: { checkUnknownComponents: true }
+    }
+  },
+
   eslint: {
     config: {
       stylistic: {
