@@ -26,19 +26,10 @@ const commissionModes: { value: CommissionMode, label: string, description: stri
   }
 ]
 
-const currencySymbol = computed(() => {
-  switch (props.currency) {
-    case 'RUB': return '₽'
-    case 'USD': return '$'
-    case 'EUR': return '€'
-    default: return '₽'
-  }
-})
-
 const example = computed(() => {
   const price = 100
   const comm = props.commissionPercent
-  const s = currencySymbol.value
+  const s = currencySymbol(props.currency || 'RUB')
 
   if (rule.value.mode === 'seller') {
     const receive = (price - price * comm / 100).toFixed(2)
@@ -57,8 +48,7 @@ const example = computed(() => {
 
 <template>
   <UPageCard
-    title="Распределение комиссии"
-    description="Определите, кто оплачивает комиссию платёжной системы."
+    title="Кто платит комиссию"
   >
     <div class="space-y-3">
       <button
@@ -93,10 +83,9 @@ const example = computed(() => {
       </button>
     </div>
 
-    <!-- Commission example -->
     <div class="mt-4 p-4 rounded-lg bg-muted/5 border border-default">
       <p class="text-xs font-medium text-muted mb-2">
-        Пример расчёта (товар за 100{{ currencySymbol }}, комиссия {{ commissionPercent }}%)
+        Пример: товар за 100{{ currencySymbol(currency || 'RUB') }}, комиссия {{ commissionPercent }}%
       </p>
       <p class="text-xs text-muted">
         {{ example }}

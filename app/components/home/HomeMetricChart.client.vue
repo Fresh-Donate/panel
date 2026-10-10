@@ -16,8 +16,7 @@ const props = defineProps<{
   summaryMode?: 'sum' | 'today'
 }>()
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
 
 interface DataRecord {
   date: Date
@@ -28,18 +27,15 @@ const { width } = useElementSize(cardRef)
 const data = ref<DataRecord[]>([])
 
 watch([() => props.period, () => props.range, () => props.currency, () => props.metric], async () => {
-  const from = props.range.start.toISOString()
-  const to = props.range.end.toISOString()
-
   try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const params: Record<string, string> = { from, to, period: props.period, tz }
-    if (props.currency) params.currency = props.currency
-
-    const chartData = await $fetch<{ date: string, amount: number, count: number }[]>('/stats/chart', {
-      baseURL: config.public.apiBase as string,
-      headers: { Authorization: `Bearer ${token.value}` },
-      params
+    const chartData = await api<{ date: string, amount: number, count: number }[]>('/stats/chart', {
+      query: {
+        from: props.range.start.toISOString(),
+        to: props.range.end.toISOString(),
+        period: props.period,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        currency: props.currency
+      }
     })
 
     const dataMap = new Map<string, number>()
@@ -81,7 +77,7 @@ const total = computed(() => {
   }
   return data.value.reduce((acc, { value }) => acc + value, 0)
 })
-const fmt = computed(() => props.formatter || ((n: number) => n.toLocaleString('ru-RU')))
+const fmt = computed(() => props.formatter || formatNumber)
 const color = computed(() => props.color || 'var(--ui-primary)')
 
 const formatDateLabel = (date: Date): string =>

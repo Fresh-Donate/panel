@@ -7,22 +7,15 @@ const props = defineProps<{
 
 const minAmount = defineModel<number>('minAmount', { required: true })
 
-const currencyLabel = computed(() => {
-  switch (props.baseCurrency) {
-    case 'RUB': return '₽'
-    case 'USD': return '$'
-    case 'EUR': return '€'
-    default: return props.baseCurrency
-  }
-})
+const currencyLabel = computed(() => currencySymbol(props.baseCurrency))
 </script>
 
 <template>
   <UPageCard
     title="Минимальная сумма платежа"
-    description="Платежи ниже этой суммы будут отклонены. Значение указывается в базовой валюте панели - при её смене сумма автоматически пересчитается."
+    description="В базовой валюте панели, при её смене пересчитывается автоматически."
   >
-    <UFormField label="Минимальная сумма">
+    <UFormField>
       <div class="flex items-center gap-2">
         <UInput
           v-model.number="minAmount"
@@ -37,7 +30,7 @@ const currencyLabel = computed(() => {
     </UFormField>
 
     <p class="text-xs text-muted mt-3">
-      Допустимый диапазон: {{ MIN_AMOUNT_LOWER }} – {{ MIN_AMOUNT_UPPER }} {{ baseCurrency }}.
+      От {{ MIN_AMOUNT_LOWER }} до {{ MIN_AMOUNT_UPPER }} {{ baseCurrency }}.
     </p>
   </UPageCard>
 </template>

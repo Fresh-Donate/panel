@@ -3,24 +3,18 @@ import type { StatsSummary } from '~/types'
 export function useStatsSummary(key: string = 'stats-summary') {
   const summary = useState<StatsSummary | null>(key, () => null)
   const loading = useState<boolean>(`${key}-loading`, () => false)
-
-  const config = useRuntimeConfig()
-  const token = useCookie('auth_token')
+  const api = useApi()
 
   async function load(from: Date, to: Date, currency?: string) {
     loading.value = true
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const params: Record<string, string> = {
-      from: from.toISOString(),
-      to: to.toISOString(),
-      tz
-    }
-    if (currency) params.currency = currency
     try {
-      summary.value = await $fetch<StatsSummary>('/stats/summary', {
-        baseURL: config.public.apiBase as string,
-        headers: { Authorization: `Bearer ${token.value}` },
-        params
+      summary.value = await api<StatsSummary>('/stats/summary', {
+        query: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          currency
+        }
       })
     } catch {
       summary.value = null

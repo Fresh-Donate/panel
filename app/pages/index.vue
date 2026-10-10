@@ -22,17 +22,6 @@ const weekRange = {
 const { load: loadWeekSummary } = useStatsSummary('stats-summary-week')
 onMounted(() => loadWeekSummary(weekRange.start, weekRange.end))
 
-const currencySymbols: Record<string, string> = {
-  RUB: '₽',
-  USD: '$',
-  EUR: '€'
-}
-
-const currencySymbol = computed(() => {
-  const code = summary.value?.currency || 'RUB'
-  return currencySymbols[code] || code
-})
-
 interface QuickAction {
   to: string
   icon: string
@@ -47,8 +36,7 @@ const quickActions: QuickAction[] = [
   { to: '/customers', icon: 'lucide:users', title: 'Клиенты', description: 'База игроков' },
   { to: '/settings', icon: 'lucide:cog', title: 'Настройки', description: 'Изменить настройки FreshDonate' },
   { to: '/shop/settings', icon: 'lucide:store', title: 'Настройки магазина', description: 'Управление страницей магазина' },
-  { to: '/analytics', icon: 'lucide:chart-spline', title: 'Аналитика', description: 'Статистика по периодам' },
-  { to: '/groups', icon: 'lucide:layers', title: 'Группы', description: 'Создать или изменить' }
+  { to: '/analytics', icon: 'lucide:chart-spline', title: 'Аналитика', description: 'Статистика по периодам' }
 ]
 </script>
 
@@ -72,7 +60,7 @@ const quickActions: QuickAction[] = [
           :period="period"
           :range="range"
           summary-mode="today"
-          :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+          :formatter="(n) => formatMoney(n, summary?.currency || 'RUB')"
         />
         <HomeMetricChart
           title="Покупки за день"
@@ -80,7 +68,7 @@ const quickActions: QuickAction[] = [
           :period="period"
           :range="range"
           summary-mode="today"
-          :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
+          :formatter="(n) => `${formatNumber(n)} шт.`"
           color="var(--ui-success)"
         />
       </div>

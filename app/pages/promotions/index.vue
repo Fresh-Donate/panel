@@ -1,41 +1,29 @@
 <script setup lang="ts">
-import type { Product, Promotion } from '~/types'
+import type { Promotion } from '~/types'
 import type { TableColumn } from '@nuxt/ui'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
+const confirm = useConfirm()
+const productsStore = useProductsStore()
+const { items: products, nameById: productNameById } = storeToRefs(productsStore)
 
-const showCreate = ref(false)
-const showEdit = ref(false)
+const showForm = ref(false)
 const editing = ref<Promotion | null>(null)
 
 const promotions = ref<Promotion[]>([])
-const products = ref<Product[]>([])
 const loading = ref(true)
-
-function authHeaders() {
-  return { Authorization: `Bearer ${token.value}` }
-}
 
 async function fetchAll() {
   loading.value = true
   try {
-    // Promotions list needs the products list too - we render product names
-    // for each row and feed the slideover's multi-select.
-    const [promos, prods] = await Promise.all([
-      $fetch<Promotion[]>('/promotions', {
-        baseURL: config.public.apiBase as string,
-        headers: authHeaders()
-      }),
-      $fetch<Product[]>('/products', {
-        baseURL: config.public.apiBase as string
-      })
+    const [promos] = await Promise.all([
+      api<Promotion[]>('/promotions'),
+      productsStore.load()
     ])
     promotions.value = promos
-    products.value = prods
-  } catch {
-    toast.add({ title: 'Ошибка загрузки', icon: 'i-lucide-alert-circle', color: 'error' })
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить акции.', 'Ошибка загрузки')
   } finally {
     loading.value = false
   }
@@ -43,24 +31,11 @@ async function fetchAll() {
 
 onMounted(fetchAll)
 
-const productNameById = computed(() => {
-  const map = new Map<string, string>()
-  for (const p of products.value) map.set(p.id, p.name)
-  return map
-})
-
 function statusOf(promo: Promotion): { label: string, color: 'success' | 'warning' | 'neutral' } {
   const now = Date.now()
-  const starts = new Date(promo.startsAt).getTime()
-  const ends = new Date(promo.endsAt).getTime()
-  if (now < starts) return { label: 'Запланирована', color: 'warning' }
-  if (now > ends) return { label: 'Завершена', color: 'neutral' }
+  if (now < new Date(promo.startsAt).getTime()) return { label: 'Запланирована', color: 'warning' }
+  if (now > new Date(promo.endsAt).getTime()) return { label: 'Завершена', color: 'neutral' }
   return { label: 'Активна', color: 'success' }
-}
-
-function fmt(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 const columns: TableColumn<Promotion>[] = [
@@ -72,29 +47,37 @@ const columns: TableColumn<Promotion>[] = [
   { accessorKey: 'actions', header: '' }
 ]
 
-async function deletePromotion(id: string) {
+async function deletePromotion(promo: Promotion) {
+  const confirmed = await confirm({
+    title: `Удалить акцию «${promo.name}»?`,
+    description: 'Скидка сразу перестанет действовать в магазине.',
+    confirmLabel: 'Удалить'
+  })
+  if (!confirmed) return
   try {
-    await $fetch(`/promotions/${id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'DELETE',
-      headers: authHeaders()
-    })
-    promotions.value = promotions.value.filter(p => p.id !== id)
-    toast.add({ title: 'Акция удалена', icon: 'i-lucide-trash-2', color: 'success' })
-  } catch {
-    toast.add({ title: 'Ошибка', description: 'Не удалось удалить акцию.', icon: 'i-lucide-alert-circle', color: 'error' })
+    await api(`/promotions/${promo.id}`, { method: 'DELETE' })
+    promotions.value = promotions.value.filter(p => p.id !== promo.id)
+    notify.success('Акция удалена', undefined, 'i-lucide-trash-2')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось удалить акцию.')
   }
 }
 
-function openEdit(promo: Promotion) {
-  editing.value = { ...promo, productIds: [...promo.productIds] }
-  showEdit.value = true
+function openCreate() {
+  editing.value = null
+  showForm.value = true
 }
 
-function onUpdated(updated: Promotion) {
-  const idx = promotions.value.findIndex(p => p.id === updated.id)
-  if (idx !== -1) promotions.value[idx] = updated
-  showEdit.value = false
+function openEdit(promo: Promotion) {
+  editing.value = promo
+  showForm.value = true
+}
+
+function onSaved(saved: Promotion) {
+  const idx = promotions.value.findIndex(p => p.id === saved.id)
+  if (idx === -1) promotions.value.unshift(saved)
+  else promotions.value[idx] = saved
+  showForm.value = false
 }
 
 function getActions(promo: Promotion) {
@@ -106,7 +89,7 @@ function getActions(promo: Promotion) {
     label: 'Удалить',
     icon: 'i-lucide-trash-2',
     color: 'error' as const,
-    onSelect: () => deletePromotion(promo.id)
+    onSelect: () => deletePromotion(promo)
   }]]
 }
 </script>
@@ -123,7 +106,7 @@ function getActions(promo: Promotion) {
           <UButton
             label="Создать акцию"
             icon="i-lucide-plus"
-            @click="showCreate = true"
+            @click="openCreate"
           />
         </template>
       </UDashboardNavbar>
@@ -168,8 +151,8 @@ function getActions(promo: Promotion) {
 
           <template #period-cell="{ row }">
             <div class="text-xs text-muted leading-snug">
-              <div>{{ fmt(row.original.startsAt) }}</div>
-              <div>→ {{ fmt(row.original.endsAt) }}</div>
+              <div>{{ formatDateTime(row.original.startsAt) }}</div>
+              <div>→ {{ formatDateTime(row.original.endsAt) }}</div>
             </div>
           </template>
 
@@ -238,24 +221,17 @@ function getActions(promo: Promotion) {
             label="Создать первую акцию"
             icon="i-lucide-plus"
             class="mt-4"
-            @click="showCreate = true"
+            @click="openCreate"
           />
         </div>
       </template>
     </template>
   </UDashboardPanel>
 
-  <PromotionCreateSlideover
-    v-model:open="showCreate"
-    :products="products"
-    @created="(p: Promotion) => { promotions.unshift(p); showCreate = false }"
-  />
-
-  <PromotionEditSlideover
-    v-if="editing"
-    v-model:open="showEdit"
+  <PromotionFormSlideover
+    v-model:open="showForm"
     :promotion="editing"
     :products="products"
-    @updated="onUpdated"
+    @saved="onSaved"
   />
 </template>

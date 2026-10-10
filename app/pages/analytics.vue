@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { sub } from 'date-fns'
 import { CalendarDate, getLocalTimeZone } from '@internationalized/date'
-import type { Period, Range } from '~/types'
-import HomeTopProductsCard from '~/components/home/HomeTopProductsCard.vue'
-import AnalyticStats from '~/components/home/AnalyticStats.vue'
+import { PAYMENT_STATUSES } from '~/types'
+import type { TableColumn } from '@nuxt/ui'
+import type { Currency, Period, Range, RecentPayment } from '~/types'
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
 
 type RangePreset = '7d' | '30d' | '90d' | 'custom'
 
@@ -16,7 +15,7 @@ const range = shallowRef<Range>({
   end: new Date()
 })
 const period = ref<Period>('daily')
-const chartCurrency = ref('RUB')
+const chartCurrency = ref<Currency>('RUB')
 
 const rangePresets: { label: string, value: RangePreset, days?: number }[] = [
   { label: '7 дней', value: '7d', days: 7 },
@@ -44,76 +43,37 @@ watch(customRange, (val) => {
   activePreset.value = 'custom'
 })
 
+function setChartCurrency(currency: Currency) {
+  chartCurrency.value = currency
+}
+
 function applyPreset(preset: typeof rangePresets[number]) {
   if (preset.value === 'custom') return
   activePreset.value = preset.value
   range.value = {
-    start: sub(new Date(), { days: preset.days! }),
+    start: sub(new Date(), { days: preset.days ?? 7 }),
     end: new Date()
   }
 }
 
 const { load: loadSummary } = useStatsSummary()
+const { load: loadFunnel } = useStatsFunnel()
 watch(
   [range, chartCurrency],
   () => loadSummary(range.value.start, range.value.end, chartCurrency.value || undefined),
   { immediate: true }
 )
+watch(range, () => loadFunnel(range.value.start, range.value.end), { immediate: true })
 
-const currencyOptions = [
-  { label: '₽ RUB', value: 'RUB' },
-  { label: '$ USD', value: 'USD' },
-  { label: '€ EUR', value: 'EUR' }
-]
-
-interface RecentPayment {
-  id: string
-  customerNickname?: string
-  customerEmail?: string
-  productName: string
-  totalAmount: number
-  currency: string
-  status: string
-  createdAt: string
-}
-
-const currencySymbols: Record<string, string> = {
-  RUB: '₽',
-  USD: '$',
-  EUR: '€'
-}
-
-const currencySymbol = computed(() => currencySymbols[chartCurrency.value] || '₽')
-
-const statusLabels: Record<string, { label: string, color: string }> = {
-  pending: { label: 'Ожидает', color: 'warning' },
-  paid: { label: 'Оплачен', color: 'info' },
-  delivered: { label: 'Выполнен', color: 'success' },
-  failed: { label: 'Ошибка', color: 'error' },
-  refunded: { label: 'Возврат', color: 'neutral' }
-}
-
-const { data: statsData } = await useAsyncData('dashboard-stats-full', () =>
-  $fetch<{ recentPayments: RecentPayment[] }>('/stats', {
-    baseURL: config.public.apiBase as string,
-    headers: { Authorization: `Bearer ${token.value}` }
-  }),
-{ default: () => ({ recentPayments: [] }) }
+const { data: statsData } = await useAsyncData(
+  'dashboard-stats-full',
+  () => api<{ recentPayments: RecentPayment[] }>('/stats'),
+  { default: () => ({ recentPayments: [] }) }
 )
 
 const recentPayments = computed(() => statsData.value.recentPayments || [])
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const columns = [
+const columns: TableColumn<RecentPayment>[] = [
   { accessorKey: 'productName', header: 'Товар' },
   { accessorKey: 'customer', header: 'Покупатель' },
   { accessorKey: 'totalAmount', header: 'Сумма' },
@@ -168,13 +128,13 @@ const columns = [
 
             <div class="flex items-center gap-1">
               <UButton
-                v-for="opt in currencyOptions"
+                v-for="opt in CURRENCY_OPTIONS"
                 :key="opt.value"
                 :label="$device.isMobile ? opt.label.charAt(0) : opt.label"
                 :variant="chartCurrency === opt.value ? 'soft' : 'ghost'"
                 :color="chartCurrency === opt.value ? 'primary' : 'neutral'"
                 size="xs"
-                @click="chartCurrency = opt.value"
+                @click="setChartCurrency(opt.value)"
               />
             </div>
           </div>
@@ -183,7 +143,7 @@ const columns = [
     </template>
 
     <template #body>
-      <AnalyticStats />
+      <HomeAnalyticStats />
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HomeMetricChart
@@ -192,7 +152,7 @@ const columns = [
           :period="period"
           :range="range"
           :currency="chartCurrency || undefined"
-          :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+          :formatter="(n) => formatMoney(n, chartCurrency)"
         />
         <HomeMetricChart
           title="Покупки"
@@ -200,7 +160,7 @@ const columns = [
           :period="period"
           :range="range"
           :currency="chartCurrency || undefined"
-          :formatter="(n) => `${n.toLocaleString('ru-RU')} шт.`"
+          :formatter="(n) => `${formatNumber(n)} шт.`"
           color="var(--ui-success)"
         />
       </div>
@@ -212,6 +172,19 @@ const columns = [
           :range="range"
           :currency="chartCurrency || undefined"
         />
+      </div>
+
+      <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+        <HomeActivityCard
+          kind="hour"
+          class="2xl:col-span-2"
+        />
+        <HomeActivityCard kind="weekday" />
+      </div>
+
+      <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+        <HomeFunnelCard class="2xl:col-span-2" />
+        <HomeFunnelProvidersCard />
       </div>
 
       <!-- Recent Payments -->
@@ -245,14 +218,14 @@ const columns = [
 
             <template #totalAmount-cell="{ row }">
               <span class="font-semibold">
-                {{ Number(row.original.totalAmount).toLocaleString() }}{{ currencySymbols[row.original.currency] || row.original.currency }}
+                {{ formatMoney(row.original.totalAmount, row.original.currency) }}
               </span>
             </template>
 
             <template #status-cell="{ row }">
               <UBadge
-                :label="statusLabels[row.original.status]?.label || row.original.status"
-                :color="(statusLabels[row.original.status]?.color as any) || 'neutral'"
+                :label="PAYMENT_STATUSES[row.original.status]?.label || row.original.status"
+                :color="PAYMENT_STATUSES[row.original.status]?.color || 'neutral'"
                 variant="subtle"
                 size="sm"
               />
@@ -260,7 +233,7 @@ const columns = [
 
             <template #createdAt-cell="{ row }">
               <span class="text-sm text-muted">
-                {{ formatDate(row.original.createdAt) }}
+                {{ formatDateTime(row.original.createdAt) }}
               </span>
             </template>
           </UTable>

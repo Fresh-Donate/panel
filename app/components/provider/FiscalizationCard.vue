@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { PaymentProvider } from '~/types'
+import type { FiscalizationConfig, PaymentProvider, ProviderConfig } from '~/types'
 
 const props = defineProps<{
   provider: PaymentProvider
 }>()
 
 const emit = defineEmits<{
-  'update:config': [config: Record<string, any>]
+  'update:config': [config: ProviderConfig]
 }>()
 
 const ROBOKASSA_SNO = [
@@ -48,12 +48,12 @@ const ROBOKASSA_PAYMENT_OBJECT = [
 ]
 
 const YOOKASSA_VAT = [
-  { label: '1 — Без НДС', value: 1 },
-  { label: '2 — НДС 0%', value: 2 },
-  { label: '3 — НДС 10%', value: 3 },
-  { label: '4 — НДС 20%', value: 4 },
-  { label: '5 — НДС 10/110', value: 5 },
-  { label: '6 — НДС 20/120', value: 6 }
+  { label: '1 - Без НДС', value: 1 },
+  { label: '2 - НДС 0%', value: 2 },
+  { label: '3 - НДС 10%', value: 3 },
+  { label: '4 - НДС 20%', value: 4 },
+  { label: '5 - НДС 10/110', value: 5 },
+  { label: '6 - НДС 20/120', value: 6 }
 ]
 
 const YOOKASSA_PAYMENT_MODE = [
@@ -80,19 +80,17 @@ const YOOKASSA_PAYMENT_SUBJECT = [
 
 const isRobokassa = computed(() => props.provider.providerId === 'robokassa')
 
-const fiscalization = computed(() => {
-  return (props.provider.providerConfig?.fiscalization || {}) as Record<string, any>
-})
+const fiscalization = computed<FiscalizationConfig>(() => props.provider.providerConfig?.fiscalization || {})
 
 const enabled = computed(() => fiscalization.value.enabled === true)
 
-function update(patch: Record<string, any>): void {
+function update(patch: FiscalizationConfig): void {
   const current = props.provider.providerConfig || {}
   const nextFc = { ...fiscalization.value, ...patch }
   emit('update:config', { ...current, fiscalization: nextFc })
 }
 
-const defaults = computed(() => {
+const defaults = computed<FiscalizationConfig>(() => {
   if (isRobokassa.value) {
     return {
       sno: 'usn_income',
@@ -110,7 +108,7 @@ const defaults = computed(() => {
 
 function setEnabled(value: boolean): void {
   if (value) {
-    update({ enabled: true, ...defaults.value, ...fiscalization.value, enabled: true })
+    update({ ...defaults.value, ...fiscalization.value, enabled: true })
   } else {
     update({ enabled: false })
   }
@@ -120,7 +118,7 @@ function setEnabled(value: boolean): void {
 <template>
   <UPageCard
     title="Фискализация (54-ФЗ)"
-    description="Передавать чек в платёжную систему. Касса формирует электронный чек, отправляет в ФНС и покупателю на email. Если у магазина онлайн-касса подключена в кабинете провайдера, эта опция должна быть включена — иначе провайдер пришлёт уведомление о нарушении."
+    description="Чек уходит в онлайн-кассу провайдера, а оттуда в ФНС и покупателю на email."
   >
     <div class="space-y-4">
       <UFormField label="Передавать чек">
@@ -145,7 +143,7 @@ function setEnabled(value: boolean): void {
 
         <UFormField
           label="Ставка НДС"
-          description="«Без НДС» — подходит для ИП на УСН/патенте без НДС. Если ваша организация — плательщик НДС, выберите соответствующую ставку."
+          description="«Без НДС» - для ИП на УСН или патенте."
         >
           <USelect
             :model-value="fiscalization.tax || defaults.tax"
@@ -157,7 +155,7 @@ function setEnabled(value: boolean): void {
 
         <UFormField
           label="Признак способа расчёта"
-          description="«Полный расчёт» — покупатель платит сразу и получает товар. В большинстве кейсов донат-магазина подходит он."
+          description="Для донат-магазина обычно «Полный расчёт»."
         >
           <USelect
             :model-value="fiscalization.paymentMethod || defaults.paymentMethod"
@@ -169,7 +167,7 @@ function setEnabled(value: boolean): void {
 
         <UFormField
           label="Признак предмета расчёта"
-          description="«Услуга» подходит для виртуальных привилегий/донатов в Minecraft. «Товар» — для физических вещей."
+          description="«Услуга» - для виртуальных привилегий, «Товар» - для физических вещей."
         >
           <USelect
             :model-value="fiscalization.paymentObject || defaults.paymentObject"
@@ -183,7 +181,7 @@ function setEnabled(value: boolean): void {
       <template v-else-if="enabled">
         <UFormField
           label="Код НДС"
-          description="Должен совпадать с настройками онлайн-кассы в кабинете ЮKassa. «1 — Без НДС» подходит для ИП на УСН без НДС."
+          description="Должен совпадать с настройками онлайн-кассы в кабинете ЮKassa. «Без НДС» - для ИП на УСН."
         >
           <USelect
             :model-value="fiscalization.vatCode ?? defaults.vatCode"
@@ -196,7 +194,7 @@ function setEnabled(value: boolean): void {
 
         <UFormField
           label="Способ расчёта"
-          description="Для большинства кейсов донат-магазина — «Полный расчёт» (оплата в момент покупки)."
+          description="Для донат-магазина обычно «Полный расчёт»."
         >
           <USelect
             :model-value="fiscalization.paymentMode || defaults.paymentMode"
@@ -208,7 +206,7 @@ function setEnabled(value: boolean): void {
 
         <UFormField
           label="Предмет расчёта"
-          description="«Услуга» — виртуальные привилегии и донаты. «Товар» — физические предметы."
+          description="«Услуга» - для виртуальных привилегий, «Товар» - для физических вещей."
         >
           <USelect
             :model-value="fiscalization.paymentSubject || defaults.paymentSubject"
@@ -223,26 +221,17 @@ function setEnabled(value: boolean): void {
           color="info"
           variant="subtle"
           title="Email покупателя обязателен"
-          description="ЮKassa не примет чек без контактов клиента. Если покупатель оплатит без email — чек не будет отправлен, оплата при этом пройдёт."
+          description="Без email чек не отправится, но оплата пройдёт."
         />
       </template>
-
-      <UAlert
-        v-if="enabled && isRobokassa"
-        icon="i-lucide-info"
-        color="info"
-        variant="subtle"
-        title="Что отправляется в Robokassa"
-        description="Для каждого товара в заказе передаётся: название, количество, сумма, выбранные выше способ и предмет расчёта и ставка НДС. Сумма по позициям подгоняется к итоговой сумме платежа — копеечные расхождения от округлений уходят в последнюю позицию."
-      />
 
       <UAlert
         v-if="!enabled"
         icon="i-lucide-triangle-alert"
         color="warning"
         variant="subtle"
-        title="Когда нужно включать"
-        description="Если у вас подключена онлайн-касса в кабинете Robokassa/ЮKassa (требование 54-ФЗ для большинства ИП и юрлиц в РФ), эта опция должна быть включена. Иначе провайдер пришлёт уведомление о нарушении и в перспективе может заблокировать выплаты."
+        title="Включите, если в кабинете провайдера подключена онлайн-касса"
+        description="Иначе провайдер пришлёт уведомление о нарушении 54-ФЗ и может заблокировать выплаты."
       />
     </div>
   </UPageCard>

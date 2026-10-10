@@ -3,19 +3,24 @@ import { z } from 'zod'
 import type { Product, Group } from '~/types'
 
 const props = defineProps<{
-  group: Group
+  group?: Group | null
   products: Product[]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{
-  updated: [group: Group]
+  saved: [group: Group]
 }>()
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-const toast = useToast()
+const api = useApi()
+const notify = useNotify()
 const loading = ref(false)
+
+const isEdit = computed(() => !!props.group)
+
+function close() {
+  open.value = false
+}
 
 const schema = z.object({
   name: z.string().min(1, 'Название обязательно').max(128, 'Макс. 128 символов'),
@@ -25,18 +30,18 @@ const schema = z.object({
 
 type FormState = z.input<typeof schema>
 
-const state = reactive<FormState>({
-  name: '',
-  upgradeMode: false,
-  productIds: []
-})
-
-watch(() => props.group, (g) => {
-  if (g) {
-    state.name = g.name
-    state.upgradeMode = g.upgradeMode
-    state.productIds = [...g.productIds]
+function stateFrom(g?: Group | null): FormState {
+  return {
+    name: g?.name ?? '',
+    upgradeMode: g?.upgradeMode ?? false,
+    productIds: [...(g?.productIds ?? [])]
   }
+}
+
+const state = reactive<FormState>(stateFrom())
+
+watch(open, (val) => {
+  if (val) Object.assign(state, stateFrom(props.group))
 }, { immediate: true })
 
 const productItems = computed(() =>
@@ -46,30 +51,15 @@ const productItems = computed(() =>
 async function onSubmit() {
   loading.value = true
   try {
-    const updated = await $fetch<Group>(`/groups/${props.group.id}`, {
-      baseURL: config.public.apiBase as string,
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: {
-        name: state.name,
-        upgradeMode: state.upgradeMode,
-        productIds: state.productIds
-      }
-    })
+    const body = { ...state }
+    const saved = props.group
+      ? await api<Group>(`/groups/${props.group.id}`, { method: 'PUT', body })
+      : await api<Group>('/groups', { method: 'POST', body })
 
-    emit('updated', updated)
-    toast.add({
-      title: 'Группа обновлена',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось обновить группу.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    emit('saved', saved)
+    notify.success(isEdit.value ? 'Группа обновлена' : 'Группа создана')
+  } catch (err) {
+    notify.apiError(err, isEdit.value ? 'Не удалось обновить группу.' : 'Не удалось создать группу.')
   } finally {
     loading.value = false
   }
@@ -79,8 +69,8 @@ async function onSubmit() {
 <template>
   <USlideover
     v-model:open="open"
-    title="Редактирование группы"
-    description="Изменения вступают в силу сразу - ценообразование пересчитывается на следующей покупке."
+    :title="isEdit ? 'Редактирование группы' : 'Новая группа'"
+    :description="isEdit ? undefined : 'Товары одной линейки, например ранги.'"
   >
     <template #body>
       <UForm
@@ -96,6 +86,7 @@ async function onSubmit() {
         >
           <UInput
             v-model="state.name"
+            placeholder="Привилегии, Кейсы..."
             class="w-full"
           />
         </UFormField>
@@ -103,7 +94,7 @@ async function onSubmit() {
         <UFormField
           label="Режим доплаты"
           name="upgradeMode"
-          description="Если включён: повторная или более дешёвая покупка из этой группы будет заблокирована, а более дорогая получит скидку на стоимость самой свежей купленной товара из группы."
+          description="Повторная или более дешёвая покупка блокируется, более дорогая идёт со скидкой на стоимость последнего купленного товара группы."
         >
           <USwitch
             v-model="state.upgradeMode"
@@ -131,12 +122,12 @@ async function onSubmit() {
             label="Отмена"
             variant="ghost"
             color="neutral"
-            @click="open = false"
+            @click="close"
           />
           <UButton
             type="submit"
-            label="Сохранить"
-            icon="i-lucide-save"
+            :label="isEdit ? 'Сохранить' : 'Создать группу'"
+            :icon="isEdit ? 'i-lucide-save' : 'i-lucide-layers'"
             :loading="loading"
           />
         </div>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod'
 
-const toast = useToast()
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
+const api = useApi()
+const notify = useNotify()
 
 const tailwindColors: Record<string, string> = {
   slate: '#64748b',
@@ -97,21 +96,12 @@ function applyData(data: ShopSettingsSchema) {
   state.cartEnabled = data.cartEnabled ?? false
 }
 
-// Load settings from API
 async function fetchSettings() {
   fetching.value = true
   try {
-    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
-      baseURL: config.public.apiBase as string
-    })
-    applyData(data)
-  } catch {
-    toast.add({
-      title: 'Ошибка загрузки',
-      description: 'Не удалось загрузить настройки магазина.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    applyData(await api<ShopSettingsSchema>('/shop-settings'))
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить настройки магазина.', 'Ошибка загрузки')
   } finally {
     fetching.value = false
   }
@@ -122,12 +112,8 @@ onMounted(fetchSettings)
 async function onSubmit() {
   loading.value = true
   try {
-    const data = await $fetch<ShopSettingsSchema>('/shop-settings', {
-      baseURL: config.public.apiBase as string,
+    const data = await api<ShopSettingsSchema>('/shop-settings', {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      },
       body: {
         name: state.name,
         description: state.description,
@@ -142,19 +128,9 @@ async function onSubmit() {
       }
     })
     applyData(data)
-    toast.add({
-      title: 'Настройки сохранены',
-      description: 'Настройки магазина успешно обновлены.',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Не удалось сохранить настройки.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    notify.success('Настройки сохранены')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось сохранить настройки.')
   } finally {
     loading.value = false
   }
@@ -185,7 +161,6 @@ async function onSubmit() {
       <UPageCard
         v-else
         title="Общие настройки"
-        description="Основная информация о вашем магазине, которая будет отображаться покупателям."
       >
         <UForm
           :schema="schema"
@@ -196,12 +171,10 @@ async function onSubmit() {
           <UFormField
             label="Название магазина"
             name="name"
-            description="Отображается в шапке магазина и на вкладке браузера."
             required
           >
             <UInput
               v-model="state.name"
-              placeholder="Введите название магазина"
               icon="i-lucide-store"
               class="w-full max-w-md"
             />
@@ -212,11 +185,9 @@ async function onSubmit() {
           <UFormField
             label="Описание"
             name="description"
-            description="Краткое описание магазина для главной страницы."
           >
             <UTextarea
               v-model="state.description"
-              placeholder="Расскажите о вашем магазине..."
               :rows="3"
               autoresize
               class="w-full max-w-lg"
@@ -228,11 +199,10 @@ async function onSubmit() {
           <UFormField
             label="Адрес сервера"
             name="ip"
-            description="IP для подключения к вашему серверу"
           >
             <UInput
               v-model="state.ip"
-              placeholder="Например: play.example.com"
+              placeholder="play.example.com"
               icon="i-lucide-link"
               class="w-full max-w-lg"
             />
@@ -243,7 +213,7 @@ async function onSubmit() {
           <UFormField
             label="Адрес магазина"
             name="shopUrl"
-            description="Публичный URL фронтенда магазина - используется для canonical-ссылок, Open Graph, sitemap.xml и кнопок «открыть магазин». Без слэша в конце. Если оставить пустым, будет использован адрес запроса."
+            description="Для canonical-ссылок, Open Graph и sitemap.xml, без слэша в конце. Если пусто, берётся адрес запроса."
           >
             <UInput
               v-model="state.shopUrl"
@@ -258,7 +228,6 @@ async function onSubmit() {
           <UFormField
             label="Основной цвет"
             name="color"
-            description="Цветовая палитра интерфейса магазина."
             required
           >
             <USelectMenu
@@ -295,7 +264,7 @@ async function onSubmit() {
           <UFormField
             label="Корзина"
             name="cartEnabled"
-            description="Позволяет покупателям складывать несколько товаров в корзину и оплачивать всё одним платежом. Если выключено — работает обычная покупка одного товара в один клик."
+            description="Несколько товаров одним платежом. Без корзины товар покупается в один клик."
           >
             <USwitch
               v-model="state.cartEnabled"
@@ -310,14 +279,14 @@ async function onSubmit() {
               Юридическая информация
             </p>
             <p class="text-sm text-muted">
-              Используется в публичных документах магазина (оферта, соглашение, политика). Все поля опциональны - если оставить пустыми, в документах будет "не указано".
+              Подставляется в оферту, соглашение и политику конфиденциальности. Пустые поля выводятся как «не указано».
             </p>
           </div>
 
           <UFormField
             label="Владелец магазина"
             name="ownerName"
-            description="ФИО (для физлица / самозанятого / ИП) или полное наименование организации."
+            description="ФИО или полное наименование организации."
           >
             <UInput
               v-model="state.ownerName"
@@ -330,7 +299,6 @@ async function onSubmit() {
           <UFormField
             label="Тип владельца"
             name="ownerType"
-            description="Влияет на формулировки в публичной оферте и политике конфиденциальности."
           >
             <USelectMenu
               v-model="state.ownerType"
@@ -343,7 +311,7 @@ async function onSubmit() {
           <UFormField
             label="ИНН"
             name="ownerInn"
-            description="10 цифр для юрлиц или 12 цифр для физлиц / самозанятых / ИП. Можно не указывать."
+            description="10 цифр для юрлиц, 12 для остальных."
           >
             <UInput
               v-model="state.ownerInn"
@@ -357,7 +325,7 @@ async function onSubmit() {
           <UFormField
             label="Контактный email"
             name="contactEmail"
-            description="На него игроки будут писать запросы по 152-ФЗ (доступ / удаление персональных данных) и претензии по покупкам."
+            description="Для запросов по 152-ФЗ и претензий по покупкам."
           >
             <UInput
               v-model="state.contactEmail"

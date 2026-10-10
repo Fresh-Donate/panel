@@ -3,9 +3,8 @@ import type { PaymentProvider } from '~/types'
 
 const props = defineProps<{
   provider: PaymentProvider
+  saving?: boolean
 }>()
-
-const saving = defineModel<boolean>('saving', { required: true })
 
 const emit = defineEmits<{
   'update:enabled': [value: boolean]

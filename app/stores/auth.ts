@@ -1,28 +1,27 @@
+interface LoginResponse {
+  token: string
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<{ id: string, login: string, role: string } | null>(null)
-  const token = useCookie('auth_token')
+  const nuxtApp = useNuxtApp()
+  const token = useCookie<string | null>('auth_token', {
+    sameSite: 'strict',
+    secure: import.meta.client && window.location.protocol === 'https:'
+  })
   const isAuthenticated = computed(() => !!token.value)
 
   async function login(login: string, password: string) {
-    const config = useRuntimeConfig()
-    const response = await $fetch<{ token: string, user: { id: string, login: string, role: string } }>(
-      '/auth/login',
-      {
-        baseURL: config.public.apiBase as string,
-        method: 'POST',
-        body: { login, password }
-      }
-    )
-
+    const response = await nuxtApp.$api<LoginResponse>('/auth/login', {
+      method: 'POST',
+      body: { login, password }
+    })
     token.value = response.token
-    user.value = response.user
   }
 
   function logout() {
     token.value = null
-    user.value = null
-    navigateTo('/login')
+    return navigateTo('/login')
   }
 
-  return { user, token, isAuthenticated, login, logout }
+  return { token, isAuthenticated, login, logout }
 })

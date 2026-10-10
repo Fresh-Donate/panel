@@ -10,6 +10,8 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxtjs/device'
   ],
+  ssr: false,
+
   devtools: { enabled: true },
 
   css: ['~/assets/css/main.css'],
@@ -21,10 +23,20 @@ export default defineNuxtConfig({
     }
   },
 
+  routeRules: {
+    '/groups': { redirect: '/products' }
+  },
+
   devServer: {
     port: 3000
   },
   compatibilityDate: '2025-07-15',
+
+  typescript: {
+    tsConfig: {
+      vueCompilerOptions: { checkUnknownComponents: true }
+    }
+  },
 
   eslint: {
     config: {

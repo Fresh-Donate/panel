@@ -21,7 +21,7 @@ function packageIdFor(denom: string): string {
 <template>
   <UPageCard
     title="Coin-пакеты Tebex"
-    description="Tebex Headless API не позволяет передать произвольную сумму - корзина собирается из заранее созданных пакетов фиксированного номинала. Создайте 6 пакетов в Tebex Dashboard с указанными ценами и вставьте их ID сюда."
+    description="Tebex не принимает произвольную сумму, поэтому корзина собирается из пакетов фиксированного номинала."
   >
     <div class="space-y-3">
       <UFormField
@@ -31,7 +31,7 @@ function packageIdFor(denom: string): string {
       >
         <UInput
           :model-value="packageIdFor(denom)"
-          :placeholder="`Package ID для номинала ${denom} ${currency}`"
+          placeholder="Package ID"
           class="w-full max-w-lg"
           @update:model-value="(val) => emit('update:coin', denom, String(val))"
         />
@@ -42,7 +42,7 @@ function packageIdFor(denom: string): string {
         color="info"
         variant="subtle"
         title="Как заполнить"
-        description="В Tebex Dashboard → Packages создайте 6 пакетов с ценами выше. Тип - Single payment, имя можно «Coin 1000» и т.д. Откройте каждый пакет, скопируйте Package ID из URL или из API-страницы и вставьте сюда."
+        description="В Tebex Dashboard → Packages создайте 6 пакетов типа Single payment с ценами из списка и вставьте сюда их Package ID."
       />
     </div>
   </UPageCard>

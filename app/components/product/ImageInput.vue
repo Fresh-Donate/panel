@@ -1,9 +1,8 @@
 <script setup lang="ts">
 const url = defineModel<string>('url', { default: '' })
 
-const config = useRuntimeConfig()
-const token = useCookie('auth_token')
-const toast = useToast()
+const api = useApi()
+const notify = useNotify()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
@@ -17,23 +16,13 @@ async function onFileSelected(event: Event) {
   // backend has its own hard ceiling.
   const MAX_BYTES = 10 * 1024 * 1024
   if (file.size > MAX_BYTES) {
-    toast.add({
-      title: 'Файл слишком большой',
-      description: 'Максимальный размер изображения - 10 МБ.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    notify.error('Файл слишком большой', 'Максимальный размер изображения - 10 МБ.')
     target.value = ''
     return
   }
 
   if (!file.type.startsWith('image/')) {
-    toast.add({
-      title: 'Неподдерживаемый формат',
-      description: 'Загрузите PNG, JPEG, WebP или GIF.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    notify.error('Неподдерживаемый формат', 'Загрузите PNG, JPEG, WebP или GIF.')
     target.value = ''
     return
   }
@@ -43,26 +32,11 @@ async function onFileSelected(event: Event) {
     const form = new FormData()
     form.append('file', file)
 
-    const res = await $fetch<{ url: string }>('/uploads/product-image', {
-      baseURL: config.public.apiBase as string,
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token.value}` },
-      body: form
-    })
-
+    const res = await api<{ url: string }>('/uploads/product-image', { method: 'POST', body: form })
     url.value = res.url
-    toast.add({
-      title: 'Изображение загружено',
-      icon: 'i-lucide-check-circle',
-      color: 'success'
-    })
-  } catch {
-    toast.add({
-      title: 'Не удалось загрузить',
-      description: 'Проверьте файл и попробуйте снова.',
-      icon: 'i-lucide-alert-circle',
-      color: 'error'
-    })
+    notify.success('Изображение загружено')
+  } catch (err) {
+    notify.apiError(err, 'Не удалось загрузить изображение.')
   } finally {
     uploading.value = false
     target.value = ''
@@ -112,8 +86,7 @@ function clear() {
           />
         </div>
         <p class="text-xs text-muted">
-          PNG, JPEG, WebP или GIF, до 10 МБ. Изображение автоматически
-          сжимается и кэшируется.
+          PNG, JPEG, WebP или GIF, до 10 МБ.
         </p>
       </div>
     </div>

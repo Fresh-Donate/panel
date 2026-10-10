@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import HomeStatCard from '~/components/home/HomeStatCard.vue'
-
 const props = defineProps<{
   stateKey?: string
 }>()
 
 const { summary } = useStatsSummary(props.stateKey)
-
-const currencySymbols: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' }
-const currencySymbol = computed(() => {
-  const code = summary.value?.currency || 'RUB'
-  return currencySymbols[code] || code
-})
+const money = (n: number) => formatMoney(n, summary.value?.currency || 'RUB')
 </script>
 
 <template>
@@ -22,7 +15,7 @@ const currencySymbol = computed(() => {
       :current="summary?.revenue?.current ?? 0"
       :previous="summary?.revenue?.previous ?? 0"
       :sparkline="summary?.revenue?.sparkline ?? []"
-      :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+      :formatter="money"
     />
 
     <HomeStatCard
@@ -40,7 +33,7 @@ const currencySymbol = computed(() => {
         :current="summary?.avgOrder?.current ?? 0"
         :previous="summary?.avgOrder?.previous ?? 0"
         :sparkline="summary?.avgOrder?.sparkline ?? []"
-        :formatter="(n) => `${n.toLocaleString('ru-RU')} ${currencySymbol}`"
+        :formatter="money"
       />
     </div>
   </div>
