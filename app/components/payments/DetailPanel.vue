@@ -17,6 +17,7 @@ const forcing = ref(false)
 const resendingReceipt = ref(false)
 
 const status = computed(() => PAYMENT_STATUSES[payment.value.status])
+const isPaid = computed(() => !!payment.value.paidAt && payment.value.status !== 'refunded')
 const deliveryLogs = computed(() => payment.value.meta?.deliveryLogs || [])
 const previousLogs = computed(() => payment.value.meta?.previousDeliveryLogs || [])
 const canResendReceipt = computed(() =>
@@ -28,7 +29,9 @@ const canResendReceipt = computed(() =>
 async function forceDelivery() {
   const confirmed = await confirm({
     title: 'Выдать принудительно?',
-    description: 'Все команды выдачи выполнятся заново. Если игрок уже получил товар, он получит его ещё раз.',
+    description: isPaid.value
+      ? 'Все команды выдачи выполнятся заново. Если игрок уже получил товар, он получит его ещё раз.'
+      : 'Заказ не оплачен или по нему был возврат — товар будет выдан бесплатно. Все команды выдачи выполнятся заново.',
     confirmLabel: 'Выдать',
     color: 'warning'
   })
