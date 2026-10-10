@@ -98,7 +98,7 @@ function formatAmount(n: number): string {
         class="grid grid-cols-5 items-center gap-4"
       >
         <img
-          :src="`https://assets.zaralx.ru/api/v1/minecraft/vanilla/player/face/${item.nickname}/full`"
+          :src="`https://assets.zaralx.ru/api/v2/minecraft/players/${item.nickname}/face?size=32`"
           class="w-4 h-4"
           :alt="item.nickname"
         >
