@@ -32,13 +32,5 @@ const examplePassword = computed(() => warnings.value.includes('example_admin_pa
         />
       </UTooltip>
     </div>
-    <UAlert
-      v-else
-      color="error"
-      variant="subtle"
-      icon="i-lucide-shield-alert"
-      title="Пароль по умолчанию"
-      description="Задайте свой ADMIN_PASSWORD в .env бэкенда и перезапустите его."
-    />
   </div>
 </template>
