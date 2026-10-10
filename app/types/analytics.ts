@@ -29,6 +29,35 @@ export interface ActivityBucket {
   amount: number
 }
 
+export interface FunnelReason {
+  reason: string
+  count: number
+}
+
+export interface FunnelProvider {
+  providerId: string | null
+  created: number
+  paid: number
+  delivered: number
+}
+
+export interface StatsFunnel {
+  created: number
+  paid: number
+  delivered: number
+  awaitingPayment: number
+  expired: number
+  declined: number
+  awaitingDelivery: number
+  deliveryFailed: number
+  refundedBeforeDelivery: number
+  refunded: number
+  declineReasons: FunnelReason[]
+  providers: FunnelProvider[]
+  medianSecondsToPay: number | null
+  medianSecondsToDeliver: number | null
+}
+
 export interface StatsSummary {
   currency: string
   revenue: MetricSeries

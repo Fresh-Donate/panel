@@ -1,15 +1,8 @@
 <script setup lang="ts">
 import { VisSingleContainer, VisDonut } from '@unovis/vue'
+import { providerName } from '~/types'
 
 const { summary } = useStatsSummary()
-
-const PROVIDER_NAMES: Record<string, string> = {
-  wata: 'Wata',
-  robokassa: 'Robokassa',
-  tebex: 'Tebex',
-  heleket: 'Heleket',
-  yookassa: 'YooKassa'
-}
 
 const COLORS = ['#0ea5e9', '#38bdf8', '#7dd3fc', '#bae6fd', '#e0f2fe']
 
@@ -21,7 +14,7 @@ const items = computed(() => {
     .sort((a, b) => b.amount - a.amount)
     .map((p, i) => ({
       ...p,
-      name: p.providerId ? (PROVIDER_NAMES[p.providerId] || p.providerId) : 'Не задан',
+      name: providerName(p.providerId),
       pct: total > 0 ? Math.round((p.amount / total) * 100) : 0,
       color: COLORS[i % COLORS.length]
     }))

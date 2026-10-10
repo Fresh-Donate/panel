@@ -48,5 +48,18 @@ export interface PaymentOption {
   enabled: boolean
 }
 
+export const PROVIDER_NAMES: Record<string, string> = {
+  wata: 'Wata',
+  robokassa: 'Robokassa',
+  tebex: 'Tebex',
+  heleket: 'Heleket',
+  yookassa: 'YooKassa',
+  cryptobot: 'CryptoBot'
+}
+
+export function providerName(providerId: string | null): string {
+  return providerId ? (PROVIDER_NAMES[providerId] || providerId) : 'Не задан'
+}
+
 export const MIN_AMOUNT_LOWER = 0.01
 export const MIN_AMOUNT_UPPER = 10000

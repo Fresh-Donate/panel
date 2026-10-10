@@ -25,6 +25,15 @@ export function pluralize(n: number, forms: [one: string, few: string, many: str
   return forms[2]
 }
 
+export function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)} с`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} мин`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} ч ${minutes % 60} мин`
+  return `${Math.floor(hours / 24)} д ${hours % 24} ч`
+}
+
 export function formatMoney(value: number | string, currency: string | null | undefined, options: { cents?: boolean } = {}): string {
   const digits = options.cents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : undefined
   return `${Number(value).toLocaleString('ru-RU', digits)} ${currencySymbol(currency)}`.trimEnd()

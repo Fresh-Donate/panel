@@ -57,11 +57,13 @@ function applyPreset(preset: typeof rangePresets[number]) {
 }
 
 const { load: loadSummary } = useStatsSummary()
+const { load: loadFunnel } = useStatsFunnel()
 watch(
   [range, chartCurrency],
   () => loadSummary(range.value.start, range.value.end, chartCurrency.value || undefined),
   { immediate: true }
 )
+watch(range, () => loadFunnel(range.value.start, range.value.end), { immediate: true })
 
 const { data: statsData } = await useAsyncData(
   'dashboard-stats-full',
@@ -161,6 +163,11 @@ const columns: TableColumn<RecentPayment>[] = [
           :formatter="(n) => `${formatNumber(n)} шт.`"
           color="var(--ui-success)"
         />
+      </div>
+
+      <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+        <HomeFunnelCard class="2xl:col-span-2" />
+        <HomeFunnelProvidersCard />
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
