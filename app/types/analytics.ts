@@ -36,18 +36,22 @@ export interface FunnelReason {
 
 export interface FunnelProvider {
   providerId: string | null
-  created: number
+  attempts: number
   paid: number
-  delivered: number
+  switched: number
+  lost: number
 }
 
 export interface StatsFunnel {
-  created: number
+  orders: number
+  attempts: number
   paid: number
+  paidFirstTry: number
   delivered: number
   awaitingPayment: number
-  expired: number
-  declined: number
+  returnedLater: number
+  leftAfterDecline: number
+  left: number
   awaitingDelivery: number
   deliveryFailed: number
   refundedBeforeDelivery: number

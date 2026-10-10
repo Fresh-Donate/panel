@@ -8,14 +8,23 @@ const pct = (part: number, whole: number) => whole > 0 ? Math.round((part / whol
 const providers = computed(() => {
   const f = funnel.value
   if (!f) return []
-  const overall = pct(f.paid, f.created)
+  const overall = pct(f.paid, f.attempts)
   return f.providers.map((p) => {
-    const conversion = pct(p.paid, p.created)
+    const conversion = pct(p.paid, p.attempts)
     return {
       ...p,
       name: providerName(p.providerId),
       conversion,
-      lagging: conversion < overall / 2
+      lagging: conversion < overall / 2,
+      segments: [
+        { key: 'paid', width: conversion, class: 'bg-primary' },
+        { key: 'switched', width: pct(p.switched, p.attempts), class: 'bg-info/60' },
+        { key: 'lost', width: pct(p.lost, p.attempts), class: 'bg-(--ui-text-dimmed)/50' }
+      ],
+      notes: [
+        p.switched > 0 ? `оплатили другим способом: ${formatNumber(p.switched)}` : '',
+        p.lost > 0 ? `ушли: ${formatNumber(p.lost)}` : ''
+      ].filter(Boolean).join(' · ')
     }
   })
 })
@@ -37,7 +46,7 @@ const reasons = computed(() => {
       Оплата по провайдерам
     </p>
     <p class="text-xs text-muted mt-1">
-      Доля оплаченных от созданных
+      Оплаты через провайдера от попыток, где его выбирали
     </p>
 
     <div
@@ -55,16 +64,24 @@ const reasons = computed(() => {
               class="font-semibold"
               :class="p.lagging ? 'text-error' : 'text-highlighted'"
             >{{ p.conversion }}%</span>
-            <span class="text-muted"> · {{ formatNumber(p.paid) }} из {{ formatNumber(p.created) }}</span>
+            <span class="text-muted"> · {{ formatNumber(p.paid) }} из {{ formatNumber(p.attempts) }}</span>
           </span>
         </div>
-        <div class="h-1.5 rounded-full bg-elevated overflow-hidden">
+        <div class="h-1.5 rounded-full bg-elevated overflow-hidden flex">
           <div
-            class="h-full rounded-full"
-            :class="p.lagging ? 'bg-error' : 'bg-primary'"
-            :style="{ width: `${p.conversion}%` }"
+            v-for="seg in p.segments"
+            :key="seg.key"
+            class="h-full"
+            :class="seg.class"
+            :style="{ width: `${seg.width}%` }"
           />
         </div>
+        <p
+          v-if="p.notes"
+          class="text-xs text-muted mt-1"
+        >
+          {{ p.notes }}
+        </p>
       </div>
     </div>
 

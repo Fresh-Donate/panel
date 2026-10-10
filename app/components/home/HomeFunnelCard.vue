@@ -7,23 +7,25 @@ const duration = (s: number | null | undefined) => s === null || s === undefined
 const DOT = {
   progress: 'bg-warning',
   error: 'bg-error',
+  returned: 'bg-info',
   neutral: 'bg-(--ui-text-dimmed)'
 }
 
-const hasData = computed(() => (funnel.value?.created ?? 0) > 0)
+const hasData = computed(() => (funnel.value?.attempts ?? 0) > 0)
 
 const steps = computed(() => {
   const f = funnel.value
   if (!f) return []
-  const loss = (label: string, count: number, dot: string) => ({ label, count, dot })
+  const loss = (label: string, count: number, dot: string, hint?: string) => ({ label, count, dot, hint })
   const raw = [
-    { label: 'Создано', count: f.created, losses: [] as ReturnType<typeof loss>[] },
+    { label: 'Попыток', count: f.attempts, caption: `из ${formatNumber(f.orders)} ${pluralize(f.orders, ['заказа', 'заказов', 'заказов'])}`, losses: [] as ReturnType<typeof loss>[] },
     {
       label: 'Оплачено',
       count: f.paid,
       losses: [
-        loss('Истекли', f.expired, DOT.neutral),
-        loss('Отклонены', f.declined, DOT.error),
+        loss('Вернулись позже', f.returnedLater, DOT.returned, 'Купили в течение 7 дней'),
+        loss('Ушли после отказа', f.leftAfterDecline, DOT.error, 'Провайдер отклонил оплату, покупки не было'),
+        loss('Ушли без покупки', f.left, DOT.neutral, 'Не купили в течение 7 дней'),
         loss('Ждут оплаты', f.awaitingPayment, DOT.progress)
       ]
     },
@@ -39,11 +41,13 @@ const steps = computed(() => {
   ]
   return raw.map((step, i) => {
     const prev = raw[i - 1]?.count ?? step.count
+    const share = pct(step.count, f.attempts)
     return {
       ...step,
+      caption: step.caption ?? `${share}% от попыток`,
       losses: step.losses.filter(l => l.count > 0),
-      share: pct(step.count, f.created),
-      lostShare: pct(prev - step.count, f.created),
+      share,
+      lostShare: pct(prev - step.count, f.attempts),
       stepShare: pct(step.count, prev)
     }
   })
@@ -53,9 +57,10 @@ const metrics = computed(() => {
   const f = funnel.value
   if (!f) return []
   return [
-    { label: 'Время до оплаты', value: duration(f.medianSecondsToPay), hint: 'Медиана от создания до оплаты' },
+    { label: 'С первого заказа', value: `${pct(f.paidFirstTry, f.paid)}%`, hint: 'Оплаты без пересоздания заказа' },
+    { label: 'Время до оплаты', value: duration(f.medianSecondsToPay), hint: 'Медиана от первого заказа попытки до оплаты' },
     { label: 'Время до выдачи', value: duration(f.medianSecondsToDeliver), hint: 'Медиана от оплаты до выдачи' },
-    { label: 'Возвраты', value: formatNumber(f.refunded), hint: 'Заказы этого периода, по которым сделан возврат' }
+    { label: 'Возвраты', value: formatNumber(f.refunded) }
   ]
 })
 </script>
@@ -68,7 +73,7 @@ const metrics = computed(() => {
           Воронка заказов
         </p>
         <p class="text-xs text-muted mt-1">
-          Заказы, созданные за выбранный период
+          Попытка - заказы одного игрока с перерывом до 30 минут
         </p>
       </div>
 
@@ -80,6 +85,7 @@ const metrics = computed(() => {
           v-for="m in metrics"
           :key="m.label"
           :text="m.hint"
+          :disabled="!m.hint"
         >
           <div>
             <dt class="text-xs text-muted">
@@ -109,7 +115,7 @@ const metrics = computed(() => {
             {{ formatNumber(step.count) }}
           </p>
           <p class="text-xs text-dimmed tabular-nums">
-            {{ i === 0 ? 'всего' : `${step.share}% от созданных` }}
+            {{ step.caption }}
           </p>
         </div>
 
@@ -145,20 +151,23 @@ const metrics = computed(() => {
           class="mt-3 space-y-1.5 text-xs"
           :style="{ gridColumn: i * 2 + 1, gridRow: 3 }"
         >
-          <li
+          <UTooltip
             v-for="l in step.losses"
             :key="l.label"
-            class="flex items-center justify-between gap-2"
+            :text="l.hint"
+            :disabled="!l.hint"
           >
-            <span class="flex items-center gap-1.5 min-w-0 text-muted">
-              <span
-                class="size-1.5 rounded-full shrink-0"
-                :class="l.dot"
-              />
-              <span class="truncate">{{ l.label }}</span>
-            </span>
-            <span class="text-highlighted tabular-nums">{{ formatNumber(l.count) }}</span>
-          </li>
+            <li class="flex items-center justify-between gap-2">
+              <span class="flex items-center gap-1.5 min-w-0 text-muted">
+                <span
+                  class="size-1.5 rounded-full shrink-0"
+                  :class="l.dot"
+                />
+                <span class="truncate">{{ l.label }}</span>
+              </span>
+              <span class="text-highlighted tabular-nums">{{ formatNumber(l.count) }}</span>
+            </li>
+          </UTooltip>
           <li
             v-if="i > 0 && step.losses.length === 0"
             class="flex items-center gap-1.5 text-success"
