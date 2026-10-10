@@ -14,7 +14,6 @@ const links = [[
   { label: 'Аналитика', icon: 'i-lucide-chart-line', to: '/analytics' },
   { label: 'Товары', icon: 'i-lucide-package', to: '/products' },
   { label: 'Акции', icon: 'i-lucide-tag', to: '/promotions' },
-  { label: 'Группы', icon: 'i-lucide-layers', to: '/groups' },
   { label: 'Платежи', icon: 'i-lucide-receipt', to: '/payments' },
   { label: 'Клиенты', icon: 'i-lucide-users', to: '/customers' },
   {

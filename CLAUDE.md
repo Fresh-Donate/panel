@@ -70,7 +70,7 @@ Never `window.confirm`.
 rebuilt from it every time the slideover opens, emits `saved`.
 
 **Shared data.** Settings → `useSettingsStore()` (`load`, `ensureLoaded`, `update(patch)`).
-Products → `useProductsStore()` (also used by groups/promotions for names and pickers).
+Products → `useProductsStore()` (also used by promotions and the group form for names and pickers).
 
 **Pages** keep data loading and wiring; anything with its own form state goes to `components/<domain>/`
 (see `components/settings/*Card.vue`). Each settings card owns a slice of `/settings` and saves only that slice.

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { z } from 'zod'
 import { PRODUCT_TYPES } from '~/types'
-import type { Product, ProductType, Server } from '~/types'
+import type { Group, Product, ProductType, Server } from '~/types'
 
 const props = defineProps<{
   product?: Product | null
   servers?: Server[]
   multiServerEnabled?: boolean
+  groups?: Group[]
+  defaultGroupIds?: string[]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -56,11 +58,16 @@ function stateFrom(p?: Product | null): FormState {
 
 const state = reactive<FormState>(stateFrom())
 const selectedServerIds = ref<string[]>([])
+const selectedGroupIds = ref<string[]>([])
 
 watch(open, (val) => {
   if (!val) return
   Object.assign(state, stateFrom(props.product))
   selectedServerIds.value = [...(props.product?.serverIds ?? [])]
+  const product = props.product
+  selectedGroupIds.value = product
+    ? (props.groups ?? []).filter(g => g.productIds.includes(product.id)).map(g => g.id)
+    : [...(props.defaultGroupIds ?? [])]
 }, { immediate: true })
 
 const forceDeliveryLocked = computed(() => selectedServerIds.value.length >= 2)
@@ -69,6 +76,7 @@ watch(forceDeliveryLocked, (locked) => {
 })
 
 const serverOptions = computed(() => (props.servers || []).map(s => ({ label: s.name, value: s.id })))
+const groupOptions = computed(() => (props.groups || []).map(g => ({ label: g.name, value: g.id })))
 
 watch(() => state.type, (t) => {
   if (t === 'privilege') state.quantity = 1
@@ -113,7 +121,8 @@ async function onSubmit() {
       allowCustomCount: state.type === 'privilege' ? false : state.allowCustomCount,
       forceDelivery: state.forceDelivery,
       imageUrl: state.imageUrl || '',
-      serverIds: props.multiServerEnabled ? selectedServerIds.value : undefined
+      serverIds: props.multiServerEnabled ? selectedServerIds.value : undefined,
+      groupIds: selectedGroupIds.value
     }
     const saved = props.product
       ? await api<Product>(`/products/${props.product.id}`, { method: 'PUT', body })
@@ -258,6 +267,21 @@ async function onSubmit() {
           >
             Серверов пока нет. Добавьте их в разделе «Настройки → Серверы».
           </p>
+        </UFormField>
+
+        <UFormField
+          v-if="groupOptions.length > 0"
+          label="Группы"
+          name="groups"
+        >
+          <USelectMenu
+            v-model="selectedGroupIds"
+            :items="groupOptions"
+            value-key="value"
+            multiple
+            placeholder="Без группы"
+            class="w-full"
+          />
         </UFormField>
 
         <UFormField

@@ -1,3 +1,5 @@
+import type { Group } from './group'
+
 export type ProductType = 'item' | 'privilege' | 'currency' | 'other'
 
 export const PRODUCT_TYPES: { value: ProductType, label: string, icon: string }[] = [
@@ -21,6 +23,11 @@ export interface ProductGroup {
   upgradeMode: boolean
 }
 
+export interface ProductServer {
+  id: string
+  name: string
+}
+
 export interface Product {
   id: string
   name: string
@@ -38,6 +45,13 @@ export interface Product {
   discountedPrice?: number
   groups?: ProductGroup[]
   serverIds?: string[]
+  servers?: ProductServer[]
   createdAt: string
   updatedAt: string
+}
+
+export interface ProductSection {
+  key: string
+  group: Group | null
+  products: Product[]
 }

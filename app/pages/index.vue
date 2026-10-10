@@ -36,8 +36,7 @@ const quickActions: QuickAction[] = [
   { to: '/customers', icon: 'lucide:users', title: 'Клиенты', description: 'База игроков' },
   { to: '/settings', icon: 'lucide:cog', title: 'Настройки', description: 'Изменить настройки FreshDonate' },
   { to: '/shop/settings', icon: 'lucide:store', title: 'Настройки магазина', description: 'Управление страницей магазина' },
-  { to: '/analytics', icon: 'lucide:chart-spline', title: 'Аналитика', description: 'Статистика по периодам' },
-  { to: '/groups', icon: 'lucide:layers', title: 'Группы', description: 'Создать или изменить' }
+  { to: '/analytics', icon: 'lucide:chart-spline', title: 'Аналитика', description: 'Статистика по периодам' }
 ]
 </script>
 

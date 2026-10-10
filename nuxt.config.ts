@@ -23,6 +23,10 @@ export default defineNuxtConfig({
     }
   },
 
+  routeRules: {
+    '/groups': { redirect: '/products' }
+  },
+
   devServer: {
     port: 3000
   },
