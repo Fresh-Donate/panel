@@ -19,3 +19,12 @@ export function localInputToIso(value: string): string {
   if (!value) return ''
   return new Date(value).toISOString()
 }
+
+export function timeZoneLabel(): string {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  if (tz === 'Europe/Moscow') return 'МСК'
+  const offset = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' })
+    .formatToParts(new Date())
+    .find(p => p.type === 'timeZoneName')?.value
+  return offset ? offset.replace('GMT', 'UTC') : tz
+}

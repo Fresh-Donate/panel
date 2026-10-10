@@ -24,6 +24,11 @@ export interface ProductSummary {
   amount: number
 }
 
+export interface ActivityBucket {
+  count: number
+  amount: number
+}
+
 export interface StatsSummary {
   currency: string
   revenue: MetricSeries
@@ -33,4 +38,7 @@ export interface StatsSummary {
   payments: MetricSeries
   paymentProviders: ProviderSummary[]
   topProducts: ProductSummary[]
+  byHour: ActivityBucket[]
+  // Monday first.
+  byWeekday: ActivityBucket[]
 }

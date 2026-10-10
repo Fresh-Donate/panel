@@ -172,6 +172,14 @@ const columns: TableColumn<RecentPayment>[] = [
         />
       </div>
 
+      <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+        <HomeActivityCard
+          kind="hour"
+          class="2xl:col-span-2"
+        />
+        <HomeActivityCard kind="weekday" />
+      </div>
+
       <!-- Recent Payments -->
       <UPageCard
         title="Последние покупки"
