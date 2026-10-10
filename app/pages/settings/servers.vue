@@ -52,18 +52,17 @@ async function requestToggle(next: boolean) {
     return
   }
   if (deliveryMethod.value !== 'plugin') {
-    notify.error('Сначала включите плагин', 'Мультисервера работают только через плагин. Переключите способ выдачи в разделе «Настройки → Общее».')
+    notify.error('Сначала включите плагин', 'Переключите способ выдачи в разделе «Настройки → Общее».')
     multiServerEnabled.value = false
     return
   }
   const confirmed = await confirm({
     title: 'Включить мультисервера?',
-    description: 'Это может привести к последствиям. Будьте внимательны.',
     details: [
-      'Товары без выбранных серверов будут скрыты на витрине магазина до настройки.',
-      'Способ выдачи RCON будет недоступен - мультисервера работают только через плагин.',
-      'Для каждого товара, на котором выбрано 2+ серверов, принудительная выдача включится автоматически.',
-      'Плагин на каждом сервере должен указать уникальный server-id в своём config.yml - нельзя ставить один и тот же конфиг на два физических сервера, иначе выдача задвоится.'
+      'Товары без выбранных серверов скроются с витрины.',
+      'RCON станет недоступен.',
+      'У товаров с 2+ серверами включится принудительная выдача.',
+      'У плагина на каждом сервере должен быть свой server-id в config.yml, иначе выдача задвоится.'
     ],
     confirmLabel: 'Включить',
     color: 'warning'
@@ -234,14 +233,14 @@ const columns: TableColumn<Server>[] = [
       >
         <UPageCard
           title="Мультисервера"
-          description="Возможность подключить несколько Minecraft-серверов к одной панели и выдавать товары на конкретные сервера."
+          description="Несколько Minecraft-серверов в одной панели с выдачей на конкретный сервер."
         >
           <p class="text-yellow-500/50">
             Функция находится в Бете! Могут быть проблемы с настройкой и выдачей, по проблемам пишите @zWork1
           </p>
           <UFormField
             label="Включить мультисервера"
-            description="Работает только через плагин (RCON не поддерживается). После включения в карточке каждого товара нужно будет выбрать сервера выдачи - товары без выбранных серверов скрываются на витрине."
+            description="Только через плагин. В каждом товаре нужно будет выбрать сервера выдачи."
           >
             <USwitch
               v-model="multiServerEnabled"
@@ -274,7 +273,7 @@ const columns: TableColumn<Server>[] = [
         <UPageCard
           v-if="savedMultiServerEnabled"
           title="Список серверов"
-          description="Каждому серверу присваивается уникальный ID - его нужно указать в config.yml плагина как server-id."
+          description="ID сервера указывается в config.yml плагина как server-id."
         >
           <UTable
             v-if="servers.length > 0"
@@ -355,14 +354,9 @@ const columns: TableColumn<Server>[] = [
       <UModal v-model:open="showCreate">
         <template #content>
           <div class="p-6 space-y-4">
-            <div>
-              <h3 class="font-bold">
-                Новый сервер
-              </h3>
-              <p class="text-sm text-muted mt-0.5">
-                ID можно оставить пустым - он сгенерируется автоматически.
-              </p>
-            </div>
+            <h3 class="font-bold">
+              Новый сервер
+            </h3>
 
             <UFormField
               label="Название"
@@ -377,18 +371,18 @@ const columns: TableColumn<Server>[] = [
 
             <UFormField
               label="ID"
-              description="Указывается в config.yml плагина как server-id. Маршрутизирует выдачу на конкретный сервер. Авторизация плагина - отдельный токен из «Настройки → Общее → Выдача». 4–64 символа: буквы, цифры, '_', '-'."
+              description="server-id в config.yml плагина. 4-64 символа: буквы, цифры, «_» и «-»."
             >
               <UInput
                 v-model="newServer.id"
-                placeholder="оставьте пустым для авто-генерации"
+                placeholder="Сгенерируется автоматически"
                 class="w-full font-mono text-sm"
               />
             </UFormField>
 
             <UFormField
               label="IP"
-              description="Отображается только в админке, для удобства. Не используется для подключения."
+              description="Только для отображения в панели."
             >
               <UInput
                 v-model="newServer.ip"
@@ -443,7 +437,7 @@ const columns: TableColumn<Server>[] = [
 
             <UFormField
               label="IP"
-              description="Отображается только в админке."
+              description="Только для отображения в панели."
             >
               <UInput
                 v-model="editForm.ip"

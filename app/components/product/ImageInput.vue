@@ -36,7 +36,7 @@ async function onFileSelected(event: Event) {
     url.value = res.url
     notify.success('Изображение загружено')
   } catch (err) {
-    notify.apiError(err, 'Проверьте файл и попробуйте снова.', 'Не удалось загрузить')
+    notify.apiError(err, 'Не удалось загрузить изображение.')
   } finally {
     uploading.value = false
     target.value = ''
@@ -86,8 +86,7 @@ function clear() {
           />
         </div>
         <p class="text-xs text-muted">
-          PNG, JPEG, WebP или GIF, до 10 МБ. Изображение автоматически
-          сжимается и кэшируется.
+          PNG, JPEG, WebP или GIF, до 10 МБ.
         </p>
       </div>
     </div>

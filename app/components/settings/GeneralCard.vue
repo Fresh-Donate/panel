@@ -32,12 +32,11 @@ async function save() {
 <template>
   <UPageCard
     title="Общие настройки"
-    description="Ключевые настройки магазина и панели."
   >
     <div class="space-y-6">
       <UFormField
         label="Режим демо-платежей"
-        description="Платежи из магазина будут автоматически приниматься и не будут взимать плату."
+        description="Платежи проходят сразу, без реального списания денег."
       >
         <USwitch v-model="state.demo_payments" />
       </UFormField>
@@ -46,7 +45,7 @@ async function save() {
 
       <UFormField
         label="Анонимная телеметрия"
-        description="Отправлять анонимные данные об инсталляции (версия, ОС, включённые шлюзы, способ выдачи) в FreshDonate. Помогает понимать, какие версии и конфигурации используются. Не содержит ников, email, ключей и сумм."
+        description="Версия, ОС, включённые платёжные системы и способ выдачи. Без ников, email, ключей и сумм."
       >
         <USwitch v-model="state.telemetry_enabled" />
       </UFormField>

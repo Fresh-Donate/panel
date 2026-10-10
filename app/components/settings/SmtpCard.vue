@@ -41,13 +41,13 @@ async function save() {
 
 async function sendTestEmail() {
   if (!testEmail.value) {
-    notify.error('Укажите адрес', 'Введите email для тестового письма.')
+    notify.error('Укажите email для теста')
     return
   }
   testing.value = true
   try {
     await api('/settings/smtp/test', { method: 'POST', body: { to: testEmail.value } })
-    notify.success('Тестовое письмо отправлено', `Проверьте ${testEmail.value}.`)
+    notify.success('Тестовое письмо отправлено', testEmail.value)
   } catch (err) {
     notify.apiError(err, 'Не удалось отправить.', 'Ошибка SMTP')
   } finally {
@@ -59,7 +59,7 @@ async function sendTestEmail() {
 <template>
   <UPageCard
     title="Отправка писем (SMTP)"
-    description="Подтверждения покупок отправляются покупателям на email. Подключите свой почтовый ящик (Яндекс, Mail.ru, Timeweb и т.п.) - настройки SMTP подскажет ваш провайдер."
+    description="Чеки уходят покупателям через ваш почтовый ящик: Яндекс, Mail.ru, Timeweb и т.п."
   >
     <div class="space-y-4">
       <UFormField
@@ -109,7 +109,7 @@ async function sendTestEmail() {
 
       <UFormField
         label="Защищённое соединение (SSL/TLS)"
-        description="Включено для порта 465. Для 587 (STARTTLS) - выключено."
+        description="Для порта 465. Для 587 (STARTTLS) выключите."
       >
         <USwitch v-model="smtp.secure" />
       </UFormField>
@@ -135,10 +135,7 @@ async function sendTestEmail() {
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <UFormField
-          label="Email отправителя"
-          description="С какого адреса покупатель увидит письмо."
-        >
+        <UFormField label="Email отправителя">
           <UInput
             v-model="smtp.fromEmail"
             placeholder="no-reply@example.com"
@@ -146,10 +143,7 @@ async function sendTestEmail() {
             class="w-full"
           />
         </UFormField>
-        <UFormField
-          label="Имя отправителя"
-          description="Отображаемое имя рядом с адресом."
-        >
+        <UFormField label="Имя отправителя">
           <UInput
             v-model="smtp.fromName"
             placeholder="FreshDonate Shop"
@@ -195,8 +189,7 @@ async function sendTestEmail() {
           class="size-5 text-info shrink-0 mt-0.5"
         />
         <p class="text-xs text-muted">
-          Тестовое письмо уходит с сохранёнными настройками SMTP и сохранённым шаблоном чека - сначала сохраните изменения.
-          Если письмо ушло в спам - проверьте DNS-записи SPF и DKIM у своего домена.
+          Тест использует сохранённые настройки и шаблон чека. Если письмо попало в спам, проверьте SPF и DKIM домена.
         </p>
       </div>
     </div>

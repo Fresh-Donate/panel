@@ -13,37 +13,37 @@ const emit = defineEmits<{
 
 const credentialLabels: Record<string, Record<string, { label: string, placeholder: string }>> = {
   yookassa: {
-    shopId: { label: 'Shop ID', placeholder: 'Введите Shop ID из личного кабинета ЮKassa' },
-    secretKey: { label: 'Секретный ключ', placeholder: 'Введите секретный ключ' }
+    shopId: { label: 'Shop ID', placeholder: 'Из личного кабинета ЮKassa' },
+    secretKey: { label: 'Секретный ключ', placeholder: '' }
   },
   heleket: {
-    apiKey: { label: 'API Key', placeholder: 'Введите API ключ из Heleket' },
-    merchantId: { label: 'Merchant ID', placeholder: 'Введите идентификатор мерчанта' }
+    apiKey: { label: 'API Key', placeholder: 'Из личного кабинета Heleket' },
+    merchantId: { label: 'Merchant ID', placeholder: '' }
   },
   cryptobot: {
-    apiToken: { label: 'API Token', placeholder: 'Токен от @CryptoBot → Crypto Pay → Create App' }
+    apiToken: { label: 'API Token', placeholder: '@CryptoBot → Crypto Pay → Create App' }
   },
   wata: {
     apiKey: { label: 'Access Token', placeholder: 'JWT-токен из кабинета Wata (prod или sandbox)' }
   },
   robokassa: {
-    merchantLogin: { label: 'Merchant Login', placeholder: 'Идентификатор магазина из кабинета Robokassa' },
-    password1: { label: 'Пароль #1', placeholder: 'Пароль #1 (используется для формирования платежа)' },
-    password2: { label: 'Пароль #2', placeholder: 'Пароль #2 (используется для проверки ResultURL)' }
+    merchantLogin: { label: 'Merchant Login', placeholder: 'Идентификатор магазина в Robokassa' },
+    password1: { label: 'Пароль #1', placeholder: '' },
+    password2: { label: 'Пароль #2', placeholder: '' }
   },
   tebex: {
-    webstoreToken: { label: 'Webstore Token', placeholder: 'Публичный токен из настроек Tebex (Webstore Builder → API Keys)' },
-    privateKey: { label: 'Private Key', placeholder: 'Приватный ключ из настроек Tebex' },
-    webhookSecret: { label: 'Webhook Secret', placeholder: 'Секрет для подписи webhook (Developers → Webhooks → Endpoints)' }
+    webstoreToken: { label: 'Webstore Token', placeholder: 'Webstore Builder → API Keys' },
+    privateKey: { label: 'Private Key', placeholder: '' },
+    webhookSecret: { label: 'Webhook Secret', placeholder: 'Developers → Webhooks → Endpoints' }
   }
 }
 
 const webhookUrls: Record<string, string> = {
-  yookassa: `В панели ЮКасса перейдите в свой магазин → Интеграция → HTTP-уведомления → Изменить настройки → укажите URL для уведомлений: ${url}/webhooks/yookassa`,
+  yookassa: `Магазин в ЮKassa → Интеграция → HTTP-уведомления: ${url}/webhooks/yookassa`,
   heleket: `При создании мерчанта Heleket укажите ${url}/webhooks/heleket`,
-  cryptobot: `В @CryptoBot → Crypto Pay → My Apps → ваше приложение → Webhooks включите вебхуки и укажите URL ${url}/webhooks/cryptobot`,
+  cryptobot: `@CryptoBot → Crypto Pay → My Apps → приложение → Webhooks: ${url}/webhooks/cryptobot`,
   wata: `В терминале WATA укажите webhook ${url}/webhooks/wata`,
-  robokassa: `В кабинете Robokassa → Технические настройки → ResultURL: ${url}/webhooks/robokassa (метод POST). Алгоритм подписи должен совпадать с настройкой в админке (по умолчанию SHA256).`,
+  robokassa: `Robokassa → Технические настройки → ResultURL: ${url}/webhooks/robokassa, метод POST, алгоритм хеша SHA256.`,
   tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`
 }
 
@@ -64,7 +64,6 @@ function isSecret(key: string): boolean {
 <template>
   <UPageCard
     title="Подключение"
-    description="Данные для авторизации в платёжной системе."
   >
     <div class="space-y-4">
       <UFormField

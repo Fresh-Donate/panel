@@ -77,7 +77,7 @@ async function deleteOption(option: PaymentOption) {
   try {
     await api(`/payment-options/${option.id}`, { method: 'DELETE' })
     options.value = options.value.filter(o => o.id !== option.id)
-    notify.success('Метод удалён', `"${option.name}" удалён.`)
+    notify.success('Метод удалён', undefined, 'i-lucide-trash-2')
   } catch (err) {
     notify.apiError(err, 'Не удалось удалить метод оплаты.')
   }
@@ -115,7 +115,6 @@ async function deleteOption(option: PaymentOption) {
       <div v-else>
         <UPageCard
           title="Методы оплаты в магазине"
-          description="Настройте варианты оплаты, которые увидят покупатели. Каждый метод привязан к платёжной системе."
         >
           <!-- Empty state -->
           <div
@@ -192,13 +191,6 @@ async function deleteOption(option: PaymentOption) {
               </div>
             </div>
           </div>
-
-          <p
-            v-if="options.length > 0"
-            class="text-xs text-muted mt-3"
-          >
-            Покупатели увидят только включённые методы оплаты.
-          </p>
         </UPageCard>
       </div>
 

@@ -56,7 +56,7 @@ async function saveProvider() {
       }
     })
     Object.assign(provider, updated)
-    notify.success('Настройки сохранены', `Настройки ${provider.name} успешно обновлены.`)
+    notify.success('Настройки сохранены')
   } catch (err) {
     notify.apiError(err, 'Не удалось сохранить настройки.')
   } finally {
@@ -173,7 +173,7 @@ function setCoinPackage(denomination: string, packageId: string) {
               class="size-16 text-muted/20 mx-auto"
             />
             <p class="mt-4 text-muted">
-              Включите {{ selectedProvider.name }} чтобы настроить
+              Включите {{ selectedProvider.name }}, чтобы настроить
             </p>
           </div>
         </div>

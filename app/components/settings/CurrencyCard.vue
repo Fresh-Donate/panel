@@ -53,12 +53,12 @@ async function save() {
 <template>
   <UPageCard
     title="Валюты"
-    description="Базовая валюта и курсы конвертации. Используются для пересчёта статистики и сортировок (например, по сумме покупок)."
+    description="Нужны для пересчёта статистики и сортировок."
   >
     <div class="space-y-6">
       <UFormField
         label="Базовая валюта"
-        description="К ней приводятся все суммы при вычислениях. При смене валюты курсы будут пересозданы со значениями по умолчанию."
+        description="При смене курсы сбрасываются на значения по умолчанию."
       >
         <USelectMenu
           :model-value="baseCurrency"
@@ -71,10 +71,7 @@ async function save() {
 
       <USeparator />
 
-      <UFormField
-        label="Курсы валют"
-        :description="`Сколько ${baseCurrency} в одной единице валюты.`"
-      >
+      <UFormField label="Курсы валют">
         <div class="space-y-2 max-w-lg">
           <div
             v-for="code in rateCurrencies"

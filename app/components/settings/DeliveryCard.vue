@@ -10,8 +10,8 @@ const notify = useNotify()
 const confirm = useConfirm()
 
 const methods: { value: DeliveryMethod, label: string, description: string, icon: string }[] = [
-  { value: 'rcon', label: 'RCON', description: 'Подключение к серверу через RCON протокол для выполнения команд', icon: 'i-lucide-terminal' },
-  { value: 'plugin', label: 'Плагин', description: 'Установите плагин на сервер для автоматической выдачи', icon: 'i-lucide-puzzle' }
+  { value: 'rcon', label: 'RCON', description: 'Бэкенд шлёт команды в консоль сервера', icon: 'i-lucide-terminal' },
+  { value: 'plugin', label: 'Плагин', description: 'Плагин сам забирает заказы с бэкенда', icon: 'i-lucide-puzzle' }
 ]
 
 const deliveryMethod = ref<DeliveryMethod>(props.settings.delivery_method)
@@ -34,7 +34,7 @@ async function selectMethod(method: DeliveryMethod) {
   if (method === deliveryMethod.value) return
   const confirmed = await confirm({
     title: 'Сменить способ выдачи?',
-    description: 'Текущий способ выдачи будет заменён. Убедитесь, что новый метод настроен корректно, иначе товары не будут выдаваться.',
+    description: 'Пока новый способ не настроен, товары не будут выдаваться.',
     confirmLabel: 'Сменить',
     color: 'warning'
   })
@@ -65,7 +65,6 @@ async function save() {
 <template>
   <UPageCard
     title="Выдача товаров"
-    description="Выберите способ выдачи товаров игрокам после оплаты."
   >
     <div class="grid grid-cols-2 gap-3 mb-6">
       <button
@@ -127,7 +126,7 @@ async function save() {
         >
           <UInput
             v-model="rcon.host"
-            placeholder="127.0.0.1 или адрес сервера"
+            placeholder="127.0.0.1"
             icon="i-lucide-server"
             class="w-full"
           />
@@ -158,16 +157,6 @@ async function save() {
       v-else
       class="space-y-4"
     >
-      <div class="flex gap-3 p-3 rounded-lg bg-info/10 border border-info/20">
-        <UIcon
-          name="i-lucide-info"
-          class="size-5 text-info shrink-0 mt-0.5"
-        />
-        <p class="text-xs text-muted">
-          Скачайте плагин и поместите его в папку <span class="font-mono">plugins/</span> вашего сервера. Плагин автоматически подключится к FreshDonate и будет выдавать товары.
-        </p>
-      </div>
-
       <div class="flex items-center gap-4 p-5 rounded-xl border border-default bg-elevated">
         <div class="size-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
           <UIcon
@@ -192,10 +181,7 @@ async function save() {
         />
       </div>
 
-      <UFormField
-        label="Токен плагина"
-        description="Используется для авторизации плагина. Укажите этот токен в config.yml плагина."
-      >
+      <UFormField label="Токен плагина">
         <div class="flex gap-2 max-w-lg">
           <UInput
             v-model="plugin.token"

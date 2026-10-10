@@ -80,7 +80,7 @@ async function onSubmit() {
       : await api<Promotion>('/promotions', { method: 'POST', body })
 
     emit('saved', saved)
-    notify.success(isEdit.value ? 'Акция обновлена' : 'Акция создана', `"${saved.name}" сохранена.`)
+    notify.success(isEdit.value ? 'Акция обновлена' : 'Акция создана')
   } catch (err) {
     notify.apiError(err, isEdit.value ? 'Не удалось обновить акцию.' : 'Не удалось создать акцию.')
   } finally {
@@ -93,9 +93,6 @@ async function onSubmit() {
   <USlideover
     v-model:open="open"
     :title="isEdit ? 'Редактирование акции' : 'Новая акция'"
-    :description="isEdit
-      ? 'Изменения вступают в силу сразу - обновлённая цена появится в магазине.'
-      : 'Скидка действует на выбранные товары в указанный период.'"
   >
     <template #body>
       <UForm
@@ -160,7 +157,6 @@ async function onSubmit() {
         <UFormField
           label="Товары"
           name="productIds"
-          :description="isEdit ? undefined : 'Оставьте пустым, чтобы создать акцию без товаров (можно добавить позже).'"
         >
           <USelectMenu
             v-model="state.productIds"

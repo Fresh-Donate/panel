@@ -57,7 +57,7 @@ async function onSubmit() {
       : await api<Group>('/groups', { method: 'POST', body })
 
     emit('saved', saved)
-    notify.success(isEdit.value ? 'Группа обновлена' : 'Группа создана', `"${saved.name}" сохранена.`)
+    notify.success(isEdit.value ? 'Группа обновлена' : 'Группа создана')
   } catch (err) {
     notify.apiError(err, isEdit.value ? 'Не удалось обновить группу.' : 'Не удалось создать группу.')
   } finally {
@@ -70,9 +70,7 @@ async function onSubmit() {
   <USlideover
     v-model:open="open"
     :title="isEdit ? 'Редактирование группы' : 'Новая группа'"
-    :description="isEdit
-      ? 'Изменения вступают в силу сразу - ценообразование пересчитывается на следующей покупке.'
-      : 'Группа объединяет товары - например, ранги одной линейки. С режимом доплаты невозможно купить более дешёвый товар, а более дорогой получит скидку на стоимость уже купленного.'"
+    :description="isEdit ? undefined : 'Товары одной линейки, например ранги.'"
   >
     <template #body>
       <UForm
@@ -96,7 +94,7 @@ async function onSubmit() {
         <UFormField
           label="Режим доплаты"
           name="upgradeMode"
-          description="Если включён: повторная или более дешёвая покупка из этой группы будет заблокирована, а более дорогая получит скидку на стоимость самого свежего купленного товара из группы."
+          description="Повторная или более дешёвая покупка блокируется, более дорогая идёт со скидкой на стоимость последнего купленного товара группы."
         >
           <USwitch
             v-model="state.upgradeMode"
@@ -107,7 +105,6 @@ async function onSubmit() {
         <UFormField
           label="Товары"
           name="productIds"
-          :description="isEdit ? undefined : 'Можно оставить пустым - добавите товары позже.'"
         >
           <USelectMenu
             v-model="state.productIds"

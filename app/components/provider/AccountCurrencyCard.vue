@@ -31,7 +31,7 @@ const shouldShow = computed(() => options.value.length > 1)
   <UPageCard
     v-if="shouldShow"
     title="Валюта аккаунта"
-    description="В какой валюте у вас настроен аккаунт у этой платёжной системы. Если товары в другой валюте - сумма будет пересчитана по курсам из общих настроек."
+    description="Товары в другой валюте пересчитываются по курсам из общих настроек."
   >
     <USelectMenu
       :model-value="selected"

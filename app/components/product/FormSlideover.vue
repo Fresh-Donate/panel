@@ -75,10 +75,10 @@ watch(() => state.type, (t) => {
 })
 
 const commandHints: Record<ProductType, string> = {
-  item: 'Используйте {player} для ника игрока и {amount} для количества.\nПример: give {player} diamond {amount}',
-  privilege: 'Используйте {player} для ника игрока.\nПример: lp user {player} parent set vip',
-  currency: 'Используйте {player} для ника и {amount} для суммы.\nПример: eco give {player} {amount}',
-  other: 'Используйте {player} для ника игрока и {amount} для количества.'
+  item: '{player} - ник игрока, {amount} - количество.',
+  privilege: '{player} - ник игрока.',
+  currency: '{player} - ник игрока, {amount} - сумма.',
+  other: '{player} - ник игрока, {amount} - количество.'
 }
 
 const commandPlaceholders: Record<ProductType, string> = {
@@ -88,11 +88,11 @@ const commandPlaceholders: Record<ProductType, string> = {
   other: 'say {player} purchased item'
 }
 
-const quantityLabels: Record<ProductType, { label: string, description: string }> = {
-  item: { label: 'Количество предметов', description: 'Сколько предметов получит игрок за эту цену.' },
-  privilege: { label: 'Кол-во (дней)', description: 'Длительность привилегии в днях. 0 = навсегда.' },
-  currency: { label: 'Сумма валюты', description: 'Сколько игровой валюты получит игрок.' },
-  other: { label: 'Количество', description: 'Количество единиц за одну покупку.' }
+const quantityLabels: Record<ProductType, string> = {
+  item: 'Количество предметов',
+  privilege: 'Кол-во (дней)',
+  currency: 'Сумма валюты',
+  other: 'Количество'
 }
 
 const commandHint = computed(() => commandHints[state.type])
@@ -120,7 +120,7 @@ async function onSubmit() {
       : await api<Product>('/products', { method: 'POST', body })
 
     emit('saved', saved)
-    notify.success(isEdit.value ? 'Товар обновлён' : 'Товар создан', `"${saved.name}" успешно сохранён.`)
+    notify.success(isEdit.value ? 'Товар обновлён' : 'Товар создан')
   } catch (err) {
     notify.apiError(err, isEdit.value ? 'Не удалось обновить товар.' : 'Не удалось создать товар.')
   } finally {
@@ -133,7 +133,6 @@ async function onSubmit() {
   <USlideover
     v-model:open="open"
     :title="isEdit ? 'Редактирование товара' : 'Новый товар'"
-    :description="isEdit ? 'Измените информацию о товаре.' : 'Заполните информацию о товаре.'"
   >
     <template #body>
       <UForm
@@ -200,8 +199,7 @@ async function onSubmit() {
 
         <UFormField
           v-if="state.type !== 'privilege'"
-          :label="qLabel.label"
-          :description="qLabel.description"
+          :label="qLabel"
           name="quantity"
           required
         >
@@ -218,7 +216,7 @@ async function onSubmit() {
           v-if="state.type !== 'privilege'"
           label="Пользовательское количество"
           name="allowCustomCount"
-          description="Разрешить пользователю ввод количества желаемого товара."
+          description="Покупатель сам указывает количество."
           required
         >
           <USwitch
@@ -230,7 +228,7 @@ async function onSubmit() {
         <UFormField
           label="Выдавать принудительно"
           name="forceDelivery"
-          :description="forceDeliveryLocked ? 'Включено автоматически: товар привязан к нескольким серверам.' : 'Выдача произойдёт даже если игрока нет на сервере.'"
+          :description="forceDeliveryLocked ? 'Товар привязан к нескольким серверам.' : 'Выдать, даже если игрока нет на сервере.'"
           required
         >
           <USwitch
@@ -244,7 +242,7 @@ async function onSubmit() {
           v-if="multiServerEnabled"
           label="Сервера выдачи"
           name="servers"
-          description="Товар будет выдан на каждом из выбранных серверов. Если ни одного - товар скрыт на витрине."
+          description="Выдаётся на каждом выбранном. Без серверов товар скрыт на витрине."
         >
           <USelectMenu
             v-model="selectedServerIds"
@@ -265,7 +263,6 @@ async function onSubmit() {
         <UFormField
           label="Описание"
           name="description"
-          description="Отображается покупателям в магазине."
         >
           <UTextarea
             v-model="state.description"
@@ -279,12 +276,11 @@ async function onSubmit() {
         <UFormField
           label="Изображение"
           name="imageUrl"
-          description="Загрузите файл (до 10 МБ) или вставьте ссылку. Картинка автоматически сжимается."
         >
           <ProductImageInput v-model:url="state.imageUrl" />
         </UFormField>
 
-        <USeparator label="Команды" />
+        <USeparator />
 
         <UFormField
           label="Команды выдачи"

@@ -68,7 +68,7 @@ async function copyPlaceholder(key: string) {
 <template>
   <UPageCard
     title="Оформление чека"
-    description="HTML-шаблон письма-подтверждения. Используйте плейсхолдеры {имя} для подстановки данных заказа."
+    description="HTML-шаблон письма-подтверждения."
   >
     <div class="space-y-4">
       <UFormField label="Тема письма">
@@ -108,7 +108,7 @@ async function copyPlaceholder(key: string) {
           </button>
         </div>
         <p class="text-xs text-muted mt-2">
-          Кликните по плейсхолдеру, чтобы скопировать. Наведите курсор - увидите подсказку.
+          Нажмите, чтобы скопировать.
         </p>
       </div>
 

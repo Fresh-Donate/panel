@@ -77,7 +77,7 @@ async function onSubmit() {
       ? await api<PaymentOption>(`/payment-options/${props.option.id}`, { method: 'PUT', body })
       : await api<PaymentOption>('/payment-options', { method: 'POST', body })
     emit('saved', saved)
-    notify.success(isEdit.value ? 'Метод обновлён' : 'Метод добавлен', `"${saved.name}" успешно сохранён.`)
+    notify.success(isEdit.value ? 'Метод обновлён' : 'Метод добавлен')
   } catch (err) {
     notify.apiError(err, isEdit.value ? 'Не удалось обновить метод оплаты.' : 'Не удалось создать метод оплаты.')
   } finally {
@@ -90,7 +90,6 @@ async function onSubmit() {
   <USlideover
     v-model:open="open"
     :title="isEdit ? 'Редактирование метода оплаты' : 'Новый метод оплаты'"
-    :description="isEdit ? 'Измените настройки метода оплаты.' : 'Добавьте новый вариант оплаты для покупателей.'"
   >
     <template #body>
       <UForm
@@ -102,7 +101,7 @@ async function onSubmit() {
         <UFormField
           label="Название"
           name="name"
-          description="Текст на кнопке в магазине."
+          description="Текст кнопки в магазине."
           required
         >
           <UInput
@@ -115,7 +114,7 @@ async function onSubmit() {
         <UFormField
           label="Иконка"
           name="icon"
-          description="Название иконки Lucide (например i-lucide-credit-card)."
+          description="Имя иконки из набора Lucide."
           required
         >
           <UInput
@@ -138,7 +137,6 @@ async function onSubmit() {
         <UFormField
           label="Тип обработки"
           name="mode"
-          description="Через подключённую платёжную систему или редиректом по произвольной ссылке."
           required
         >
           <USelectMenu
@@ -153,7 +151,6 @@ async function onSubmit() {
           v-if="state.mode === 'provider'"
           label="Платёжная система"
           name="providerId"
-          description="Какая платёжная система будет обрабатывать оплату."
           required
         >
           <USelectMenu
@@ -168,7 +165,7 @@ async function onSubmit() {
           v-else
           label="Ссылка для перенаправления"
           name="redirectUrl"
-          description="Доступные плейсхолдеры: {nickname}, {email}, {amount}, {price}, {currency}, {product}, {count}, {productId}."
+          description="Плейсхолдеры: {nickname}, {email}, {amount}, {price}, {currency}, {product}, {count}, {productId}."
           required
         >
           <UInput

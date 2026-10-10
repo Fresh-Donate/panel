@@ -11,14 +11,12 @@ const fields: AuthFormField[] = [{
   name: 'login',
   type: 'text',
   label: 'Логин',
-  placeholder: 'Введите логин',
   required: true,
   autocomplete: 'username'
 }, {
   name: 'password',
   label: 'Пароль',
   type: 'password',
-  placeholder: 'Введите пароль',
   required: true,
   autocomplete: 'current-password'
 }]

@@ -31,7 +31,7 @@ async function forceDelivery() {
     title: 'Выдать принудительно?',
     description: isPaid.value
       ? 'Все команды выдачи выполнятся заново. Если игрок уже получил товар, он получит его ещё раз.'
-      : 'Заказ не оплачен или по нему был возврат — товар будет выдан бесплатно. Все команды выдачи выполнятся заново.',
+      : 'Заказ не оплачен или по нему был возврат, товар будет выдан бесплатно. Все команды выдачи выполнятся заново.',
     confirmLabel: 'Выдать',
     color: 'warning'
   })
@@ -40,7 +40,7 @@ async function forceDelivery() {
   forcing.value = true
   try {
     payment.value = await api<Payment>(`/payments/${payment.value.id}/force-delivery`, { method: 'POST' })
-    notify.success('Выдача запущена', 'Команды выполнятся на сервере, результат появится в логах')
+    notify.success('Выдача запущена')
     emit('changed')
   } catch (err) {
     notify.apiError(err, 'Не удалось запустить выдачу')
