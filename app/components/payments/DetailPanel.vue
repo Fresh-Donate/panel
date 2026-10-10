@@ -11,30 +11,38 @@ const emit = defineEmits<{
 
 const api = useApi()
 const notify = useNotify()
+const confirm = useConfirm()
 
-const retrying = ref(false)
+const forcing = ref(false)
 const resendingReceipt = ref(false)
 
 const status = computed(() => PAYMENT_STATUSES[payment.value.status])
 const deliveryLogs = computed(() => payment.value.meta?.deliveryLogs || [])
 const previousLogs = computed(() => payment.value.meta?.previousDeliveryLogs || [])
-const canRetry = computed(() => ['paid', 'failed'].includes(payment.value.status))
 const canResendReceipt = computed(() =>
   !!payment.value.customerEmail
   && ['paid', 'delivered'].includes(payment.value.status)
   && !payment.value.meta?.demo
 )
 
-async function retryDelivery() {
-  retrying.value = true
+async function forceDelivery() {
+  const confirmed = await confirm({
+    title: 'Выдать принудительно?',
+    description: 'Все команды выдачи выполнятся заново. Если игрок уже получил товар, он получит его ещё раз.',
+    confirmLabel: 'Выдать',
+    color: 'warning'
+  })
+  if (!confirmed) return
+
+  forcing.value = true
   try {
-    payment.value = await api<Payment>(`/payments/${payment.value.id}/retry-delivery`, { method: 'POST' })
-    notify.success('Повторная выдача', 'Попытка выдачи запущена')
+    payment.value = await api<Payment>(`/payments/${payment.value.id}/force-delivery`, { method: 'POST' })
+    notify.success('Выдача запущена', 'Команды выполнятся на сервере, результат появится в логах')
     emit('changed')
   } catch (err) {
     notify.apiError(err, 'Не удалось запустить выдачу')
   } finally {
-    retrying.value = false
+    forcing.value = false
   }
 }
 
@@ -234,14 +242,13 @@ async function resendReceipt() {
         </div>
 
         <UButton
-          v-if="canRetry"
-          icon="i-lucide-refresh-cw"
-          label="Повторить выдачу"
+          icon="i-lucide-send"
+          label="Выдать принудительно"
           color="warning"
           variant="soft"
           block
-          :loading="retrying"
-          @click="retryDelivery"
+          :loading="forcing"
+          @click="forceDelivery"
         />
 
         <div

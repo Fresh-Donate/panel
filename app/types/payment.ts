@@ -19,6 +19,7 @@ export interface DeliveryLog {
   attempt: number
   timestamp: string
   success: boolean
+  serverId?: string
   results?: DeliveryLogResult[]
   error?: string
 }

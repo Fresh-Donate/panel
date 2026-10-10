@@ -10,13 +10,19 @@ defineProps<{
 <template>
   <div class="space-y-2">
     <div
-      v-for="log in logs"
-      :key="log.attempt"
+      v-for="(log, index) in logs"
+      :key="index"
       class="rounded-lg border border-default p-3"
       :class="{ 'opacity-60': faded }"
     >
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-medium">Попытка {{ log.attempt }}</span>
+        <span class="text-xs font-medium">
+          Попытка {{ log.attempt }}
+          <span
+            v-if="log.serverId"
+            class="text-muted font-normal"
+          >· {{ log.serverId }}</span>
+        </span>
         <div class="flex items-center gap-2">
           <span class="text-[10px] text-muted">{{ formatDateTime(log.timestamp, { seconds: true }) }}</span>
           <UBadge
