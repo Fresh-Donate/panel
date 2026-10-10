@@ -165,11 +165,6 @@ const columns: TableColumn<RecentPayment>[] = [
         />
       </div>
 
-      <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
-        <HomeFunnelCard class="2xl:col-span-2" />
-        <HomeFunnelProvidersCard />
-      </div>
-
       <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
         <HomeProvidersCard />
         <HomeTopProductsCard />
@@ -185,6 +180,11 @@ const columns: TableColumn<RecentPayment>[] = [
           class="2xl:col-span-2"
         />
         <HomeActivityCard kind="weekday" />
+      </div>
+
+      <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+        <HomeFunnelCard class="2xl:col-span-2" />
+        <HomeFunnelProvidersCard />
       </div>
 
       <!-- Recent Payments -->
