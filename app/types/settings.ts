@@ -9,6 +9,7 @@ export interface SmtpConfig {
   secure: boolean
   user: string
   password: string
+  passwordSet: boolean
   fromEmail: string
   fromName: string
 }

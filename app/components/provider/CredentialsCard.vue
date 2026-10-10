@@ -51,13 +51,17 @@ function getLabel(key: string): string {
   return credentialLabels[props.provider.providerId]?.[key]?.label || key
 }
 
-function getPlaceholder(key: string): string {
-  return credentialLabels[props.provider.providerId]?.[key]?.placeholder || ''
+function isSecret(key: string): boolean {
+  return key in props.provider.secretCredentials
 }
 
-function isSecret(key: string): boolean {
-  const lower = key.toLowerCase()
-  return lower.includes('secret') || lower.includes('key')
+function isStored(key: string): boolean {
+  return props.provider.secretCredentials[key] === true
+}
+
+function getPlaceholder(key: string): string {
+  if (isStored(key)) return '••••••••'
+  return credentialLabels[props.provider.providerId]?.[key]?.placeholder || ''
 }
 </script>
 
@@ -70,10 +74,12 @@ function isSecret(key: string): boolean {
         v-for="(_, key) in provider.credentials"
         :key="key"
         :label="getLabel(key as string)"
+        :help="isStored(key as string) ? 'Сохранено. Новое значение заменит текущее' : undefined"
       >
         <UInput
           :model-value="provider.credentials[key as string]"
           :type="isSecret(key as string) ? 'password' : 'text'"
+          :autocomplete="isSecret(key as string) ? 'new-password' : 'off'"
           :placeholder="getPlaceholder(key as string)"
           class="w-full max-w-lg"
           @update:model-value="emit('update:credential', key as string, $event as string)"

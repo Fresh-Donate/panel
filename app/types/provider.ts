@@ -31,6 +31,7 @@ export interface PaymentProvider {
   enabled: boolean
   testMode: boolean
   credentials: Record<string, string>
+  secretCredentials: Record<string, boolean>
   providerConfig: ProviderConfig
   commissionPercent: number
   commissionRule: CommissionRule

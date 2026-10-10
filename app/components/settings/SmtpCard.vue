@@ -123,11 +123,15 @@ async function sendTestEmail() {
             class="w-full"
           />
         </UFormField>
-        <UFormField label="Пароль">
+        <UFormField
+          label="Пароль"
+          :help="smtp.passwordSet ? 'Сохранено. Новое значение заменит текущее' : undefined"
+        >
           <UInput
             v-model="smtp.password"
             type="password"
-            placeholder="••••••••"
+            autocomplete="new-password"
+            :placeholder="smtp.passwordSet ? '••••••••' : ''"
             icon="i-lucide-lock"
             class="w-full"
           />
