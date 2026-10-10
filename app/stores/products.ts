@@ -7,7 +7,7 @@ export const useProductsStore = defineStore('products', () => {
   const nameById = computed(() => new Map(items.value.map(p => [p.id, p.name])))
 
   async function load(): Promise<void> {
-    items.value = await api<Product[]>('/products')
+    items.value = await api<Product[]>('/products/all')
   }
 
   function upsert(product: Product): void {
