@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PAYMENT_STATUSES } from '~/types'
+import { DECLINE_REASONS, PAYMENT_STATUSES } from '~/types'
 import type { Payment } from '~/types'
 
 const payment = defineModel<Payment>('payment', { required: true })
@@ -20,6 +20,14 @@ const status = computed(() => PAYMENT_STATUSES[payment.value.status])
 const isPaid = computed(() => !!payment.value.paidAt && payment.value.status !== 'refunded')
 const deliveryLogs = computed(() => payment.value.meta?.deliveryLogs || [])
 const previousLogs = computed(() => payment.value.meta?.previousDeliveryLogs || [])
+const failure = computed(() => {
+  const { cancelReason, providerError, wata, tebex } = payment.value.meta || {}
+  if (payment.value.status !== 'failed' || !cancelReason) return null
+  return {
+    title: DECLINE_REASONS[cancelReason] || cancelReason,
+    description: providerError || wata?.errorDescription || tebex?.declineMessage
+  }
+})
 const canResendReceipt = computed(() =>
   !!payment.value.customerEmail
   && ['paid', 'delivered'].includes(payment.value.status)
@@ -103,6 +111,15 @@ async function resendReceipt() {
             size="sm"
           />
         </div>
+
+        <UAlert
+          v-if="failure"
+          icon="i-lucide-circle-alert"
+          color="error"
+          variant="subtle"
+          :title="failure.title"
+          :description="failure.description"
+        />
 
         <div
           v-if="payment.itemsCount > 1 && payment.items?.length"

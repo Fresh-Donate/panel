@@ -87,6 +87,10 @@ export interface Payment {
     deliveryLogs?: DeliveryLog[]
     previousDeliveryLogs?: DeliveryLog[]
     confirmationEmailSentAt?: string
+    cancelReason?: string
+    providerError?: string
+    wata?: { errorDescription?: string }
+    tebex?: { declineMessage?: string }
   }
   externalPaymentUrl: string | null
   createdAt: string
