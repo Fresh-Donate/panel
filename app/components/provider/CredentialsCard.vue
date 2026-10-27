@@ -35,6 +35,10 @@ const credentialLabels: Record<string, Record<string, { label: string, placehold
     webstoreToken: { label: 'Webstore Token', placeholder: 'Webstore Builder → API Keys' },
     privateKey: { label: 'Private Key', placeholder: '' },
     webhookSecret: { label: 'Webhook Secret', placeholder: 'Developers → Webhooks → Endpoints' }
+  },
+  rollypay: {
+    apiKey: { label: 'API Key', placeholder: 'Настройки кассы → API' },
+    signingSecret: { label: 'Signing Secret', placeholder: '' }
   }
 }
 
@@ -44,7 +48,8 @@ const webhookUrls: Record<string, string> = {
   cryptobot: `@CryptoBot → Crypto Pay → My Apps → приложение → Webhooks: ${url}/webhooks/cryptobot`,
   wata: `В терминале WATA укажите webhook ${url}/webhooks/wata`,
   robokassa: `Robokassa → Технические настройки → ResultURL: ${url}/webhooks/robokassa, метод POST, алгоритм хеша SHA256.`,
-  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`
+  tebex: `В Tebex Dashboard укажите webhook ${url}/webhooks/tebex`,
+  rollypay: `В настройках кассы RollyPay укажите callback_url: ${url}/webhooks/rollypay`
 }
 
 function getLabel(key: string): string {
