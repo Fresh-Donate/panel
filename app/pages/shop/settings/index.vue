@@ -1,105 +1,67 @@
 <script setup lang="ts">
-import { z } from 'zod'
+import type { ShopFieldItem, ShopSchemaSource, ShopSettings, ShopSettingsSchema } from '~/types'
+
+type LiveSchema
+  = | { status: 'ok', schema: ShopSettingsSchema }
+    | { status: 'missing' | 'invalid' | 'unreachable' }
 
 const api = useApi()
 const notify = useNotify()
 
-const tailwindColors: Record<string, string> = {
-  slate: '#64748b',
-  gray: '#6b7280',
-  zinc: '#71717a',
-  neutral: '#737373',
-  stone: '#78716c',
-  red: '#ef4444',
-  orange: '#f97316',
-  amber: '#f59e0b',
-  yellow: '#eab308',
-  lime: '#84cc16',
-  green: '#22c55e',
-  emerald: '#10b981',
-  teal: '#14b8a6',
-  cyan: '#06b6d4',
-  sky: '#0ea5e9',
-  blue: '#3b82f6',
-  indigo: '#6366f1',
-  violet: '#8b5cf6',
-  purple: '#a855f7',
-  fuchsia: '#d946ef',
-  pink: '#ec4899',
-  rose: '#f43f5e'
-}
-
-const colorNames = Object.keys(tailwindColors)
-
-const colorItems = colorNames.map(color => ({
-  label: color.charAt(0).toUpperCase() + color.slice(1),
-  value: color
-}))
-
-type OwnerType = '' | 'individual' | 'self_employed' | 'sole_proprietor' | 'legal_entity'
-
-const ownerTypeItems: { label: string, value: OwnerType }[] = [
-  { label: 'Не указывать', value: '' },
-  { label: 'Физическое лицо', value: 'individual' },
-  { label: 'Самозанятый (НПД)', value: 'self_employed' },
-  { label: 'Индивидуальный предприниматель', value: 'sole_proprietor' },
-  { label: 'Юридическое лицо', value: 'legal_entity' }
-]
-
-const schema = z.object({
-  name: z.string().min(1, 'Название магазина обязательно').max(64, 'Максимум 64 символа'),
-  description: z.string().max(500, 'Максимум 500 символов').optional(),
-  ip: z.string().min(1, 'Минимум 1 символ').max(64, 'Максимум 64 символа').optional(),
-  color: z.string().min(1, 'Выберите цвет'),
-  shopUrl: z.union([z.literal(''), z.string().url('Должен быть валидный URL').max(256, 'Максимум 256 символов')]).optional(),
-  ownerName: z.string().max(256, 'Максимум 256 символов').optional(),
-  ownerType: z.enum(['', 'individual', 'self_employed', 'sole_proprietor', 'legal_entity']).optional(),
-  ownerInn: z.union([
-    z.literal(''),
-    z.string().regex(/^\d{10}$|^\d{12}$/, 'ИНН должен содержать 10 или 12 цифр')
-  ]).optional(),
-  contactEmail: z.union([
-    z.literal(''),
-    z.string().email('Должен быть валидный email').max(256, 'Максимум 256 символов')
-  ]).optional(),
-  cartEnabled: z.boolean().optional()
-})
-
-type ShopSettingsSchema = z.output<typeof schema>
-
-const state = reactive<ShopSettingsSchema>({
-  name: '',
-  description: '',
-  ip: 'play.example.com',
-  color: 'sky',
-  shopUrl: '',
-  ownerName: '',
-  ownerType: '',
-  ownerInn: '',
-  contactEmail: '',
-  cartEnabled: false
-})
-
-const loading = ref(false)
 const fetching = ref(true)
+const loadingSchema = ref(false)
+const shopUrl = ref('')
+const values = ref<ShopFieldItem>({})
+const schema = ref<ShopSettingsSchema | null>(null)
+const source = ref<ShopSchemaSource | null>(null)
+const liveStatus = ref<LiveSchema['status'] | null>(null)
 
-function applyData(data: ShopSettingsSchema) {
-  state.name = data.name
-  state.description = data.description || ''
-  state.ip = data.ip
-  state.color = data.color
-  state.shopUrl = data.shopUrl || ''
-  state.ownerName = data.ownerName || ''
-  state.ownerType = data.ownerType || ''
-  state.ownerInn = data.ownerInn || ''
-  state.contactEmail = data.contactEmail || ''
-  state.cartEnabled = data.cartEnabled ?? false
+const supported = computed(() => schema.value?.version === SHOP_SCHEMA_VERSION)
+
+async function fetchLiveSchema(url: string): Promise<LiveSchema> {
+  if (!url) return { status: 'unreachable' }
+  try {
+    const data = await $fetch<unknown>(`${url}/api/settings-schema`, { timeout: 5000 })
+    return isShopSchema(data) ? { status: 'ok', schema: data } : { status: 'invalid' }
+  } catch (err) {
+    return (err as { statusCode?: number }).statusCode === 404 ? { status: 'missing' } : { status: 'unreachable' }
+  }
 }
 
-async function fetchSettings() {
+async function loadSchema() {
+  loadingSchema.value = true
+  try {
+    const [live, snapshot] = await Promise.all([
+      fetchLiveSchema(shopUrl.value),
+      api<{ schema: ShopSettingsSchema | null }>('/shop-settings/schema').then(r => r.schema).catch(() => null)
+    ])
+    liveStatus.value = live.status
+
+    if (live.status === 'ok') {
+      schema.value = live.schema
+      source.value = 'live'
+    } else if (live.status === 'missing') {
+      schema.value = LEGACY_SHOP_SCHEMA
+      source.value = 'legacy'
+    } else if (snapshot) {
+      schema.value = snapshot
+      source.value = 'snapshot'
+    } else {
+      schema.value = null
+      source.value = null
+    }
+  } finally {
+    loadingSchema.value = false
+  }
+}
+
+async function load() {
   fetching.value = true
   try {
-    applyData(await api<ShopSettingsSchema>('/shop-settings'))
+    const data = await api<ShopSettings>('/shop-settings')
+    shopUrl.value = data.shopUrl
+    values.value = data.fields
+    await loadSchema()
   } catch (err) {
     notify.apiError(err, 'Не удалось загрузить настройки магазина.', 'Ошибка загрузки')
   } finally {
@@ -107,34 +69,18 @@ async function fetchSettings() {
   }
 }
 
-onMounted(fetchSettings)
+onMounted(load)
 
-async function onSubmit() {
-  loading.value = true
-  try {
-    const data = await api<ShopSettingsSchema>('/shop-settings', {
-      method: 'PUT',
-      body: {
-        name: state.name,
-        description: state.description,
-        ip: state.ip,
-        color: state.color,
-        ...(state.shopUrl ? { shopUrl: state.shopUrl } : {}),
-        ownerName: state.ownerName ?? '',
-        ownerType: state.ownerType ?? '',
-        ownerInn: state.ownerInn ?? '',
-        contactEmail: state.contactEmail ?? '',
-        cartEnabled: state.cartEnabled ?? false
-      }
-    })
-    applyData(data)
-    notify.success('Настройки сохранены')
-  } catch (err) {
-    notify.apiError(err, 'Не удалось сохранить настройки.')
-  } finally {
-    loading.value = false
-  }
+async function onAddressSaved(url: string) {
+  shopUrl.value = url
+  await loadSchema()
 }
+
+function onSaved(data: ShopSettings) {
+  values.value = data.fields
+}
+
+const retryAction = [{ label: 'Повторить', icon: 'i-lucide-refresh-cw', onClick: () => loadSchema() }]
 </script>
 
 <template>
@@ -158,196 +104,80 @@ async function onSubmit() {
         />
       </div>
 
-      <UPageCard
+      <div
         v-else
-        title="Общие настройки"
+        class="space-y-6"
       >
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-6"
-          @submit="onSubmit"
+        <ShopSettingsAddressCard
+          :shop-url="shopUrl"
+          @saved="onAddressSaved"
+        />
+
+        <div
+          v-if="loadingSchema"
+          class="flex items-center justify-center py-12"
         >
-          <UFormField
-            label="Название магазина"
-            name="name"
-            required
-          >
-            <UInput
-              v-model="state.name"
-              icon="i-lucide-store"
-              class="w-full max-w-md"
-            />
-          </UFormField>
+          <UIcon
+            name="i-lucide-loader-circle"
+            class="size-8 animate-spin text-muted"
+          />
+        </div>
 
-          <USeparator />
+        <template v-else>
+          <UAlert
+            v-if="source === 'snapshot'"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-cloud-off"
+            :title="liveStatus === 'invalid' ? 'Магазин вернул некорректную схему настроек' : 'Магазин не ответил'"
+            description="Форма построена по последней сохранённой схеме."
+            :actions="retryAction"
+          />
 
-          <UFormField
-            label="Описание"
-            name="description"
-          >
-            <UTextarea
-              v-model="state.description"
-              :rows="3"
-              autoresize
-              class="w-full max-w-lg"
-            />
-          </UFormField>
+          <UAlert
+            v-else-if="source === 'legacy'"
+            color="info"
+            variant="subtle"
+            icon="i-lucide-info"
+            title="Магазин не отдаёт схему настроек"
+            description="Показаны стандартные поля."
+          />
 
-          <USeparator />
+          <UAlert
+            v-else-if="!schema && !shopUrl"
+            color="info"
+            variant="subtle"
+            icon="i-lucide-info"
+            title="Нет адреса магазина"
+          />
 
-          <UFormField
-            label="Адрес сервера"
-            name="ip"
-          >
-            <UInput
-              v-model="state.ip"
-              placeholder="play.example.com"
-              icon="i-lucide-link"
-              class="w-full max-w-lg"
-            />
-          </UFormField>
+          <UAlert
+            v-else-if="!schema"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-alert-circle"
+            :title="liveStatus === 'invalid' ? 'Магазин вернул некорректную схему настроек' : 'Не удалось получить схему настроек'"
+            :description="`${shopUrl}/api/settings-schema`"
+            :actions="retryAction"
+          />
 
-          <USeparator />
+          <UAlert
+            v-if="schema && !supported"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-alert-circle"
+            :title="`Схема настроек версии ${schema.version} не поддерживается`"
+            description="Обновите панель."
+          />
 
-          <UFormField
-            label="Адрес магазина"
-            name="shopUrl"
-            description="Для canonical-ссылок, Open Graph и sitemap.xml, без слэша в конце. Если пусто, берётся адрес запроса."
-          >
-            <UInput
-              v-model="state.shopUrl"
-              placeholder="https://shop.example.com"
-              icon="i-lucide-globe"
-              class="w-full max-w-lg"
-            />
-          </UFormField>
-
-          <USeparator />
-
-          <UFormField
-            label="Основной цвет"
-            name="color"
-            required
-          >
-            <USelectMenu
-              v-model="state.color"
-              :items="colorItems"
-              value-key="value"
-              placeholder="Выберите цвет"
-              class="w-full max-w-xs"
-            >
-              <template #leading>
-                <span
-                  class="size-3 rounded-full shrink-0"
-                  :style="{ backgroundColor: tailwindColors[state.color] }"
-                />
-              </template>
-            </USelectMenu>
-
-            <div class="mt-4 flex flex-wrap gap-2">
-              <button
-                v-for="color in colorNames"
-                :key="color"
-                type="button"
-                class="size-8 rounded-lg transition-all duration-150 cursor-pointer"
-                :class="state.color === color ? 'ring-2 ring-primary ring-offset-2 ring-offset-default scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100'"
-                :style="{ backgroundColor: tailwindColors[color] }"
-                :title="color.charAt(0).toUpperCase() + color.slice(1)"
-                @click="state.color = color"
-              />
-            </div>
-          </UFormField>
-
-          <USeparator />
-
-          <UFormField
-            label="Корзина"
-            name="cartEnabled"
-            description="Несколько товаров одним платежом. Без корзины товар покупается в один клик."
-          >
-            <USwitch
-              v-model="state.cartEnabled"
-              label="Включить корзину"
-            />
-          </UFormField>
-
-          <USeparator />
-
-          <div class="space-y-1">
-            <p class="font-semibold">
-              Юридическая информация
-            </p>
-            <p class="text-sm text-muted">
-              Подставляется в оферту, соглашение и политику конфиденциальности. Пустые поля выводятся как «не указано».
-            </p>
-          </div>
-
-          <UFormField
-            label="Владелец магазина"
-            name="ownerName"
-            description="ФИО или полное наименование организации."
-          >
-            <UInput
-              v-model="state.ownerName"
-              placeholder="Иванов Иван Иванович"
-              icon="i-lucide-user"
-              class="w-full max-w-lg"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Тип владельца"
-            name="ownerType"
-          >
-            <USelectMenu
-              v-model="state.ownerType"
-              :items="ownerTypeItems"
-              value-key="value"
-              class="w-full max-w-md"
-            />
-          </UFormField>
-
-          <UFormField
-            label="ИНН"
-            name="ownerInn"
-            description="10 цифр для юрлиц, 12 для остальных."
-          >
-            <UInput
-              v-model="state.ownerInn"
-              placeholder="123456789012"
-              icon="i-lucide-hash"
-              class="w-full max-w-xs"
-              :maxlength="12"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Контактный email"
-            name="contactEmail"
-            description="Для запросов по 152-ФЗ и претензий по покупкам."
-          >
-            <UInput
-              v-model="state.contactEmail"
-              type="email"
-              placeholder="contact@example.com"
-              icon="i-lucide-mail"
-              class="w-full max-w-lg"
-            />
-          </UFormField>
-
-          <USeparator />
-
-          <div>
-            <UButton
-              type="submit"
-              label="Сохранить"
-              icon="i-lucide-save"
-              :loading="loading"
-            />
-          </div>
-        </UForm>
-      </UPageCard>
+          <ShopSettingsFieldsForm
+            v-else-if="schema"
+            :schema="schema"
+            :values="values"
+            @saved="onSaved"
+          />
+        </template>
+      </div>
     </template>
   </UDashboardPanel>
 </template>

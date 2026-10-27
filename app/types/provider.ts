@@ -55,7 +55,8 @@ export const PROVIDER_NAMES: Record<string, string> = {
   tebex: 'Tebex',
   heleket: 'Heleket',
   yookassa: 'YooKassa',
-  cryptobot: 'CryptoBot'
+  cryptobot: 'CryptoBot',
+  rollypay: 'RollyPay'
 }
 
 export function providerName(providerId: string | null): string {

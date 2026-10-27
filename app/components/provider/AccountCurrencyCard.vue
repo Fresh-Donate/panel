@@ -14,7 +14,8 @@ const AVAILABLE_CURRENCIES: Record<string, string[]> = {
   heleket: ['USD', 'EUR', 'RUB'],
   wata: ['RUB', 'USD', 'EUR'],
   robokassa: ['RUB'],
-  tebex: ['USD', 'EUR']
+  tebex: ['USD', 'EUR'],
+  rollypay: ['RUB', 'EUR']
 }
 
 const options = computed(() => {

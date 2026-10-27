@@ -1,42 +1,44 @@
 <script setup lang="ts">
 const url = defineModel<string>('url', { default: '' })
 
+const props = withDefaults(defineProps<{
+  endpoint?: string
+  accept?: string
+}>(), {
+  endpoint: '/uploads/shop-file',
+  accept: undefined
+})
+
 const api = useApi()
 const notify = useNotify()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
 
+const fileName = computed(() => {
+  if (!url.value) return ''
+  try {
+    const last = new URL(url.value).pathname.split('/').filter(Boolean).pop() ?? ''
+    return decodeURIComponent(last) || url.value
+  } catch {
+    return url.value
+  }
+})
+
 async function onFileSelected(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
-
-  // Client-side gate so a 50 MB phone photo doesn't even start the request;
-  // backend has its own hard ceiling.
-  const MAX_BYTES = 10 * 1024 * 1024
-  if (file.size > MAX_BYTES) {
-    notify.error('Файл слишком большой', 'Максимальный размер изображения - 10 МБ.')
-    target.value = ''
-    return
-  }
-
-  if (!file.type.startsWith('image/')) {
-    notify.error('Неподдерживаемый формат', 'Загрузите PNG, JPEG, WebP или GIF.')
-    target.value = ''
-    return
-  }
 
   uploading.value = true
   try {
     const form = new FormData()
     form.append('file', file)
 
-    const res = await api<{ url: string }>('/uploads/product-image', { method: 'POST', body: form })
+    const res = await api<{ url: string }>(props.endpoint, { method: 'POST', body: form })
     url.value = res.url
-    notify.success('Изображение загружено')
   } catch (err) {
-    notify.apiError(err, 'Не удалось загрузить изображение.')
+    notify.apiError(err, 'Не удалось загрузить файл.')
   } finally {
     uploading.value = false
     target.value = ''
@@ -50,22 +52,23 @@ function clear() {
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-start gap-3">
-      <div class="size-20 rounded-lg overflow-hidden bg-elevated border border-default flex items-center justify-center shrink-0">
-        <img
-          v-if="url"
-          :src="url"
-          alt=""
-          class="size-full object-cover"
-        >
+    <div class="flex items-center gap-3">
+      <div class="size-12 rounded-lg bg-elevated border border-default flex items-center justify-center shrink-0">
         <UIcon
-          v-else
-          name="i-lucide-image"
-          class="size-8 text-muted/40"
+          :name="url ? 'i-lucide-file-check' : 'i-lucide-file'"
+          class="size-6 text-muted"
         />
       </div>
 
       <div class="flex-1 min-w-0 space-y-2">
+        <ULink
+          v-if="url"
+          :to="url"
+          target="_blank"
+          class="block truncate text-sm"
+        >
+          {{ fileName }}
+        </ULink>
         <div class="flex flex-wrap gap-2">
           <UButton
             label="Загрузить файл"
@@ -85,16 +88,13 @@ function clear() {
             @click="clear"
           />
         </div>
-        <p class="text-xs text-muted">
-          PNG, JPEG, WebP или GIF, до 10 МБ.
-        </p>
       </div>
     </div>
 
     <input
       ref="fileInput"
       type="file"
-      accept="image/png,image/jpeg,image/webp,image/gif"
+      :accept="accept"
       class="hidden"
       @change="onFileSelected"
     >
