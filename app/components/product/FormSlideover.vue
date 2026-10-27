@@ -301,7 +301,7 @@ async function onSubmit() {
           label="Изображение"
           name="imageUrl"
         >
-          <ProductImageInput v-model:url="state.imageUrl" />
+          <UploadImageInput v-model:url="state.imageUrl" />
         </UFormField>
 
         <USeparator />
